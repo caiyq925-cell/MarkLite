@@ -28,6 +28,7 @@ export function createEditor(
   intensity: EntityIntensity = "aggressive",
   blacklist: string[] = [],
   onStatus?: (payload: StatusPayload) => void,
+  onSync?: () => void,
 ): EditorHandle {
   const statusCallback = onStatus;
   const extensions = [
@@ -55,6 +56,13 @@ export function createEditor(
               const payload = computeStatusPayload(u.view, intensity, blacklist);
               statusCallback(payload);
             }
+          }),
+        ]
+      : []),
+    ...(onSync
+      ? [
+          EditorView.updateListener.of((u) => {
+            if (u.docChanged || u.selectionSet || u.viewportChanged) onSync();
           }),
         ]
       : []),

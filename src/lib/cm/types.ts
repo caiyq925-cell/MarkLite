@@ -56,7 +56,6 @@ export type EntityIntensity = "aggressive" | "conservative";
  */
 export interface AppConfig {
   splitRatio: number;
-  tocVisible: boolean;
   blockRemoteImages: boolean;
   window?: { x: number; y: number; w: number; h: number; maximized: boolean } | null;
   entityIntensity: EntityIntensity;

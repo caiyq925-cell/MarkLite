@@ -9,7 +9,9 @@
 
   let tabs = $state<DocumentTab[]>([]);
   let activeId = $state<string | null>(null);
-  let tocVisible = $state(true);
+  let tocOpen = $state(false);
+  let activeHeadingId = $state<string | null>(null);
+  let tocPos = $state({ x: 8, y: 40 });
   let blockRemote = $state(false);
   let entityIntensity = $state<"aggressive" | "conservative">("aggressive");
   let entityBlacklist = $state<string[]>([]);
@@ -25,9 +27,8 @@
   let editorHost: HTMLDivElement | undefined = $state();
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
-  let dragging = false;
-  let tocDragging = false;
-  let tocWidth = $state(220);
+  let tocTriggerEl: HTMLButtonElement | undefined = $state();
+  let tocPanelEl: HTMLDivElement | undefined = $state();
   let debounceHandle = 0;
   let unlistenOpen: UnlistenFn | undefined;
   let unlistenClose: UnlistenFn | undefined;
@@ -73,7 +74,6 @@
     const cfg: AppConfig = {
       window: { x: pos.x, y: pos.y, w: size.width, h: size.height, maximized },
       splitRatio: 0.5,
-      tocVisible,
       blockRemoteImages: blockRemote,
       entityIntensity,
       entityBlacklist,
@@ -84,7 +84,6 @@
   async function loadConfig() {
     try {
       const cfg = await invoke<AppConfig>("get_config");
-      tocVisible = cfg.tocVisible ?? true;
       blockRemote = cfg.blockRemoteImages ?? false;
       entityIntensity = cfg.entityIntensity ?? "aggressive";
       entityBlacklist = cfg.entityBlacklist ?? [];
@@ -295,24 +294,59 @@
     editor?.scrollToLine(h.sourceLine + 1);
   }
 
-  function onTocSplitDown(e: MouseEvent) {
-    tocDragging = true;
-    e.preventDefault();
-    e.stopPropagation();
+  const TOC_PANEL_WIDTH = 260;
+
+  function positionToc() {
+    const rect = tocTriggerEl?.getBoundingClientRect();
+    if (!rect) return;
+    const x = Math.max(8, Math.min(rect.left, window.innerWidth - TOC_PANEL_WIDTH - 8));
+    tocPos = { x, y: rect.bottom + 4 };
   }
 
-  function onMouseMove(e: MouseEvent) {
-    if (!tocDragging) return;
-    const workspace = document.querySelector(".workspace");
-    if (!workspace) return;
-    const rect = workspace.getBoundingClientRect();
-    const newWidth = Math.min(400, Math.max(140, e.clientX - rect.left));
-    tocWidth = newWidth;
+  function toggleToc() {
+    if (!tocOpen) positionToc();
+    tocOpen = !tocOpen;
   }
 
-  function onMouseUp() {
-    tocDragging = false;
+  function onTocPointerDown(e: PointerEvent) {
+    if (!tocOpen) return;
+    const target = e.target as Node;
+    if (tocPanelEl?.contains(target)) return;
+    if (tocTriggerEl?.contains(target)) return;
+    tocOpen = false;
   }
+
+  function onTocResize() {
+    if (tocOpen) positionToc();
+  }
+
+  // 滚动同步：以编辑区视口顶部所在行为准，高亮其上方最近的标题
+  function syncTocHighlight() {
+    if (!editor) {
+      activeHeadingId = null;
+      return;
+    }
+    const view = editor.view;
+    if (!view.state.doc.length) {
+      activeHeadingId = null;
+      return;
+    }
+    const topLine = view.state.doc.lineAt(
+      view.lineBlockAtHeight(view.scrollDOM.scrollTop).from,
+    ).number;
+    let current: Heading | null = null;
+    for (const h of headings) {
+      if (h.sourceLine + 1 > topLine) break;
+      current = h;
+    }
+    activeHeadingId = current?.id ?? null;
+  }
+
+  // 高亮项变化时，保证弹层内当前标题可见
+  $effect(() => {
+    if (!tocOpen || !activeHeadingId || !tocPanelEl) return;
+    tocPanelEl.querySelector<HTMLElement>(".toc-item.active")?.scrollIntoView({ block: "nearest" });
+  });
 
   function nextTab() {
     if (!tabs.length) return;
@@ -338,6 +372,10 @@
 
   function onKey(e: KeyboardEvent) {
     const ctrl = e.ctrlKey || e.metaKey;
+    if (e.key === "Escape" && tocOpen) {
+      tocOpen = false;
+      return;
+    }
     if (ctrl && e.key.toLowerCase() === "o") {
       e.preventDefault();
       void chooseOpen();
@@ -373,10 +411,6 @@
     void setTitle();
   });
 
-  function attachScroll(handle: EditorHandle) {
-    // 用于 TOC 滚动同步（如需）
-  }
-
   $effect(() => {
     const tabId = activeId;
     const tab = tabs.find((t) => t.id === tabId) ?? null;
@@ -385,6 +419,7 @@
       editor = null;
       boundId = null;
       headings = [];
+      tocOpen = false;
       return;
     }
     encodingHint =
@@ -404,8 +439,7 @@
       editor = createEditor(editorHost, tab.text, onText, tab.readonlyPlain, entityIntensity, entityBlacklist, (payload) => {
         const el = document.getElementById("status-info");
         if (el) el.textContent = payload.rawSnippet || "";
-      });
-      attachScroll(editor);
+      }, () => syncTocHighlight());
     } else {
       editor.setText(tab.text, tab.readonlyPlain);
     }
@@ -414,8 +448,8 @@
 
   onMount(async () => {
     window.addEventListener("keydown", onKey);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("pointerdown", onTocPointerDown);
+    window.addEventListener("resize", onTocResize);
     await loadConfig();
     try {
       const argv = await invoke<string[]>("get_argv");
@@ -452,8 +486,8 @@
 
   onDestroy(() => {
     window.removeEventListener("keydown", onKey);
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("mouseup", onMouseUp);
+    window.removeEventListener("pointerdown", onTocPointerDown);
+    window.removeEventListener("resize", onTocResize);
     unlistenOpen?.();
     unlistenClose?.();
     editor?.destroy();
@@ -475,7 +509,7 @@
     <div class="menu">
       <button type="button">视图</button>
       <div class="menu-panel">
-        <button type="button" onclick={() => (tocVisible = !tocVisible)}>大纲</button>
+        <button type="button" bind:this={tocTriggerEl} onclick={() => toggleToc()}>大纲</button>
         <button type="button" onclick={() => { blockRemote = !blockRemote; }}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
         </button>
@@ -515,24 +549,32 @@
     </div>
   {:else}
     <div class="workspace">
-      {#if tocVisible}
-        <aside class="toc" style="width:{tocWidth}px">
-          <div class="toc-header">
-            <h2>大纲</h2>
-            <button class="toc-close" type="button" title="关闭大纲" onclick={() => (tocVisible = false)}>×</button>
-          </div>
-          {#each headings as h}
-            <button class="toc-item" type="button" style="padding-left:{6 + (h.level - 1) * 10}px" onclick={() => jumpHeading(h)}>
-              {h.text}
-            </button>
-          {:else}
-            <p>没有标题</p>
-          {/each}
-        </aside>
-        <div class="toc-split" onmousedown={onTocSplitDown}></div>
-      {/if}
       <div class="editor-full">
         <div class="editor-host" bind:this={editorHost}></div>
+      </div>
+    </div>
+  {/if}
+
+  {#if tocOpen && active}
+    <div class="toc-popup" bind:this={tocPanelEl} style="left:{tocPos.x}px; top:{tocPos.y}px">
+      <div class="toc-header">
+        <h2>大纲</h2>
+        <button class="toc-close" type="button" title="关闭大纲" onclick={() => (tocOpen = false)}>×</button>
+      </div>
+      <div class="toc-body">
+        {#each headings as h (h.id)}
+          <button
+            class="toc-item"
+            class:active={h.id === activeHeadingId}
+            type="button"
+            style="padding-left:{6 + (h.level - 1) * 10}px"
+            onclick={() => jumpHeading(h)}
+          >
+            {h.text}
+          </button>
+        {:else}
+          <p>没有标题</p>
+        {/each}
       </div>
     </div>
   {/if}

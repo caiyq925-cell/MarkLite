@@ -49,7 +49,6 @@ pub struct WindowGeom {
 pub struct AppConfig {
     pub window: Option<WindowGeom>,
     pub split_ratio: f32,
-    pub toc_visible: bool,
     pub block_remote_images: bool,
 }
 
@@ -58,7 +57,6 @@ impl Default for AppConfig {
         Self {
             window: None,
             split_ratio: 0.5,
-            toc_visible: true,
             block_remote_images: false,
         }
     }

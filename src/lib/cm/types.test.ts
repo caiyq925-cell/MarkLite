@@ -5,7 +5,6 @@ describe("AppConfig", () => {
   it("should include new entity fields", () => {
     const cfg: AppConfig = {
       splitRatio: 0.5,
-      tocVisible: true,
       blockRemoteImages: false,
       entityIntensity: "aggressive" as EntityIntensity,
       entityBlacklist: [],
@@ -18,7 +17,6 @@ describe("AppConfig", () => {
   it("should have conservative intensity option", () => {
     const cfg: AppConfig = {
       splitRatio: 0.5,
-      tocVisible: true,
       blockRemoteImages: false,
       entityIntensity: "conservative" as EntityIntensity,
       entityBlacklist: [],
@@ -29,7 +27,6 @@ describe("AppConfig", () => {
   it("should allow window config", () => {
     const cfg: AppConfig = {
       splitRatio: 0.5,
-      tocVisible: true,
       blockRemoteImages: false,
       entityIntensity: "aggressive" as EntityIntensity,
       entityBlacklist: [],
@@ -40,7 +37,7 @@ describe("AppConfig", () => {
   });
 
   it("should support old config format with defaults", () => {
-    const old = { splitRatio: 0.5, tocVisible: true, blockRemoteImages: false };
+    const old = { splitRatio: 0.5, blockRemoteImages: false };
     const cfg: AppConfig = { ...old, entityIntensity: "aggressive", entityBlacklist: [] };
     expect(cfg.entityIntensity).toBeDefined();
     expect(cfg.entityBlacklist).toBeDefined();

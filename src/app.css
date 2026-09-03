@@ -204,15 +204,29 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   flex: 1;
   min-height: 0;
 }
-.toc {
-  width: 220px;
-  min-width: 140px;
-  max-width: 400px;
-  position: relative;
-  overflow: auto;
+.toc-popup {
+  position: fixed;
+  width: 260px;
+  max-width: calc(100vw - 16px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
   padding: 8px;
   background: var(--bg-elev);
-  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--text) 18%, transparent);
+  z-index: 30;
+}
+.toc-popup .toc-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.toc-popup p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 4px;
 }
 .toc-header {
   display: flex;
@@ -234,13 +248,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   line-height: 1;
 }
 .toc-close:hover { background: var(--border); color: var(--text); }
-.toc button.toc-item {
+.toc-popup button.toc-item {
   display: block;
   width: 100%;
   text-align: left;
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 13px;
+  flex-shrink: 0;
+}
+.toc-popup button.toc-item.active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
 }
 .panes {
   display: flex;
@@ -288,15 +307,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .pane-label:hover .pane-close { opacity: 1; }
 .pane-close:hover { background: var(--border); color: var(--text); }
-.toc-split {
-  width: 5px;
-  cursor: col-resize;
-  background: transparent;
-  transition: background 0.15s;
-  flex-shrink: 0;
-}
-.toc-split:hover { background: var(--border); }
-.toc-split.dragging { background: var(--accent); }
 .split {
   width: 6px;
   cursor: col-resize;
@@ -684,7 +694,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 
 @media print {
-  .menubar, .tabs, .toc, .toc-split, .pane:first-child, .split, .status, .dialog-backdrop { display: none !important; }
+  .menubar, .tabs, .toc-popup, .pane:first-child, .split, .status, .dialog-backdrop { display: none !important; }
   .workspace, .panes, .pane, .preview-host { display: block !important; height: auto !important; overflow: visible !important; }
   .shell { overflow: visible; }
   /* 打印时隐藏所有装饰层 */
