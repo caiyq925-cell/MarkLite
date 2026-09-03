@@ -72,8 +72,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .menu {
   position: relative;
 }
-.menu > button { font-weight: 600; }
+.menu > button { font-weight: 500; font-size: 13px; }
 .menu-panel {
+  display: none;
   position: absolute;
   top: 100%;
   left: 0;
@@ -84,6 +85,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   box-shadow: var(--shadow);
   padding: 4px;
   z-index: 20;
+}
+.menu:hover .menu-panel {
+  display: block;
 }
 .menu-panel button {
   display: flex;

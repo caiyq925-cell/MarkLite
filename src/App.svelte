@@ -17,7 +17,6 @@
   let blockRemote = $state(false);
   let sourceVisible = $state(true);
   let previewVisible = $state(true);
-  let menu = $state<string | null>(null);
   let errorText = $state<string | null>(null);
   let prompt = $state<null | {
     title: string;
@@ -384,8 +383,6 @@
     } else if (ctrl && e.key.toLowerCase() === "f") {
       e.preventDefault();
       editor?.openFind();
-    } else if (e.key === "Escape") {
-      menu = null;
     }
   }
 
@@ -497,36 +494,30 @@
 <div class="shell" ondragover={(e) => e.preventDefault()} ondrop={onDrop} role="application">
   <div class="menubar">
     <div class="menu">
-      <button type="button" onclick={() => (menu = menu === "file" ? null : "file")}>文件</button>
-      {#if menu === "file"}
-        <div class="menu-panel">
-          <button type="button" onclick={() => { menu = null; void chooseOpen(); }}>打开<kbd>Ctrl+O</kbd></button>
-          <button type="button" disabled={!active} onclick={() => { menu = null; void saveActive(false); }}>保存<kbd>Ctrl+S</kbd></button>
-          <button type="button" disabled={!active} onclick={() => { menu = null; void saveActive(true); }}>另存为<kbd>Ctrl+Shift+S</kbd></button>
-          <button type="button" disabled={!active} onclick={() => { menu = null; void printPreview(); }}>打印</button>
-        </div>
-      {/if}
+      <button type="button">文件</button>
+      <div class="menu-panel">
+        <button type="button" onclick={() => void chooseOpen()}>打开<kbd>Ctrl+O</kbd></button>
+        <button type="button" disabled={!active} onclick={() => void saveActive(false)}>保存<kbd>Ctrl+S</kbd></button>
+        <button type="button" disabled={!active} onclick={() => void saveActive(true)}>另存为<kbd>Ctrl+Shift+S</kbd></button>
+        <button type="button" disabled={!active} onclick={() => void printPreview()}>打印</button>
+      </div>
     </div>
     <div class="menu">
-      <button type="button" onclick={() => (menu = menu === "view" ? null : "view")}>视图</button>
-      {#if menu === "view"}
-        <div class="menu-panel">
-          <button type="button" onclick={() => (tocVisible = !tocVisible)}>大纲</button>
-          <button type="button" onclick={() => (sourceVisible = !sourceVisible)}>源码</button>
-          <button type="button" onclick={() => (previewVisible = !previewVisible)}>预览</button>
-          <button type="button" onclick={() => { blockRemote = !blockRemote; void refreshPreview(); }}>
-            {blockRemote ? "允许远程图片" : "阻止远程图片"}
-          </button>
-        </div>
-      {/if}
+      <button type="button">视图</button>
+      <div class="menu-panel">
+        <button type="button" onclick={() => (tocVisible = !tocVisible)}>大纲</button>
+        <button type="button" onclick={() => (sourceVisible = !sourceVisible)}>源码</button>
+        <button type="button" onclick={() => (previewVisible = !previewVisible)}>预览</button>
+        <button type="button" onclick={() => { blockRemote = !blockRemote; void refreshPreview(); }}>
+          {blockRemote ? "允许远程图片" : "阻止远程图片"}
+        </button>
+      </div>
     </div>
     <div class="menu">
-      <button type="button" onclick={() => (menu = menu === "help" ? null : "help")}>帮助</button>
-      {#if menu === "help"}
-        <div class="menu-panel">
-          <button type="button" onclick={() => { menu = null; errorText = "MarkLite 0.1.0 — 离线 Markdown 阅读与轻编辑"; }}>关于</button>
-        </div>
-      {/if}
+      <button type="button">帮助</button>
+      <div class="menu-panel">
+        <button type="button" onclick={() => { errorText = "MarkLite 0.1.0 — 离线 Markdown 阅读与轻编辑"; }}>关于</button>
+      </div>
     </div>
   </div>
 
