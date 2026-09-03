@@ -73,32 +73,9 @@ export function createEditor(
   return {
     view,
     setText(text, nextReadonly) {
-      view.setState(
-        EditorState.create({
-          doc: text,
-          extensions: [
-            lineNumbers(),
-            highlightActiveLine(),
-            history(),
-            search(),
-            keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
-            EditorView.updateListener.of((u) => {
-              if (u.docChanged) onChange(u.state.doc.toString());
-            }),
-            EditorView.theme({
-              "&": { height: "100%" },
-              ".cm-scroller": { overflow: "auto" },
-            }),
-            // 装饰层插件
-            inlineFencePlugin(),
-            blockGutter(),
-            asideMarkPlugin(),
-            statusProbePlugin(intensity, blacklist),
-            ...(nextReadonly ? [] : [markdown()]),
-            EditorState.readOnly.of(nextReadonly),
-          ],
-        }),
-      );
+      // 使用 dispatch 替换整个 document，避免 setState 重建视图
+      const changes = { from: 0, to: view.state.doc.length, insert: text };
+      view.dispatch({ changes });
     },
     getText() {
       return view.state.doc.toString();

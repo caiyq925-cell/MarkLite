@@ -232,9 +232,11 @@
 
   function closeTab(tid: string) {
     const idx = tabs.findIndex((t) => t.id === tid);
+    const nextTab = tabs[idx + 1];
+    const prevTab = tabs[idx - 1];
     tabs = tabs.filter((t) => t.id !== tid);
     if (activeId === tid) {
-      activeId = tabs[idx]?.id ?? tabs[idx - 1]?.id ?? null;
+      activeId = nextTab?.id ?? prevTab?.id ?? null;
     }
   }
 
