@@ -8,6 +8,7 @@
   import { extractHeadings } from "./lib/toc";
   import { renderPreview } from "./lib/preview";
   import { syncPreviewToSource, syncSourceToPreview } from "./lib/sync-scroll";
+  import { openUrl } from "@tauri-apps/plugin-opener";
 
   let tabs = $state<DocumentTab[]>([]);
   let activeId = $state<string | null>(null);
@@ -348,6 +349,21 @@
     window.print();
   }
 
+  async function onPreviewClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    const a = target.closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href") ?? "";
+    if (/^https?:\/\//i.test(href) || /^mailto:/i.test(href)) {
+      e.preventDefault();
+      try {
+        await openUrl(href);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   function onKey(e: KeyboardEvent) {
     const ctrl = e.ctrlKey || e.metaKey;
     if (ctrl && e.key.toLowerCase() === "o") {
@@ -373,12 +389,12 @@
     }
   }
 
-  function onDrop(e: DragEvent) {
+  async function onDrop(e: DragEvent) {
     e.preventDefault();
     const files = [...(e.dataTransfer?.files ?? [])];
     for (const f of files) {
       const p = (f as File & { path?: string }).path;
-      if (p) void openPath(p);
+      if (p) await openPath(p);
     }
   }
 
@@ -407,6 +423,12 @@
       headings = [];
       return;
     }
+    encodingHint =
+      tab.encoding === "gbk" ? "已按 GBK 打开，保存将写 UTF-8" : tab.bom ? "UTF-8 BOM" : "UTF-8";
+    headings = extractHeadings(tab.text);
+    void refreshPreview();
+    void invoke("set_asset_root", { dir: parentDir(tab.path) });
+
     if (!editorHost) return;
     if (boundId === tab.id) {
       if (editor && editor.view.dom.parentElement !== editorHost) {
@@ -422,11 +444,6 @@
       editor.setText(tab.text, tab.readonlyPlain);
     }
     boundId = tab.id;
-    encodingHint =
-      tab.encoding === "gbk" ? "已按 GBK 打开，保存将写 UTF-8" : tab.bom ? "UTF-8 BOM" : "UTF-8";
-    headings = extractHeadings(tab.text);
-    void refreshPreview();
-    void invoke("set_asset_root", { dir: parentDir(tab.path) });
   });
 
   onMount(async () => {
@@ -442,16 +459,28 @@
     } catch {
       /* web preview */
     }
-    unlistenOpen = await listen<string[]>("open-files", (ev) => {
-      for (const p of ev.payload ?? []) void openPath(p);
+    unlistenOpen = await listen<string[]>("open-files", async (ev) => {
+      for (const p of ev.payload ?? []) await openPath(p);
     });
     const win = getCurrentWindow();
     unlistenClose = await win.onCloseRequested(async (event) => {
       event.preventDefault();
       const ok = await closeWindowFlow();
       if (!ok) return;
-      await persistConfig();
-      await invoke("exit_app");
+      try {
+        await persistConfig();
+      } catch {
+        /* ignore */
+      }
+      try {
+        await invoke("exit_app");
+      } catch {
+        try {
+          await win.destroy();
+        } catch {
+          /* ignore */
+        }
+      }
     });
   });
 
@@ -554,6 +583,7 @@
             <div
               class="preview-host"
               bind:this={previewHost}
+              onclick={onPreviewClick}
               onscroll={() => {
                 if (syncing || !editor || !previewHost) return;
                 syncing = true;

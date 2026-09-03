@@ -9,6 +9,8 @@
     "core:window:allow-set-title",
     "core:event:default",
     "dialog:default",
+    "opener:default",
+    "opener:allow-default-urls",
     "app-commands"
   ]
 }

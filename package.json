@@ -19,6 +19,7 @@
     "@codemirror/view": "^6.36.8",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
+    "@tauri-apps/plugin-opener": "^2.4.0",
     "dompurify": "^3.2.6",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
