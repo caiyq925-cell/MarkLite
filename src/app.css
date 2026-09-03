@@ -96,48 +96,73 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   outline-offset: 2px;
 }
 
-.menubar {
-  display: flex;
-  gap: 2px;
-  padding: 4px 8px;
+.titlebar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  height: 40px;
+  padding-left: 10px;
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
-}
-.menubar .menus {
-  display: flex;
-  gap: 2px;
-}
-.toolbar {
-  display: flex;
-  gap: 2px;
-  padding-left: 8px;
-  border-left: 1px solid var(--border);
-  margin-left: 4px;
-}
-.toolbar button {
-  font-size: 12px;
-  padding: 3px 10px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--muted);
-}
-.toolbar button .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border);
-  display: inline-block;
+  user-select: none;
   flex-shrink: 0;
 }
-.toolbar button.active {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+.tb-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
 }
-.toolbar button.active .dot {
-  background: var(--accent);
+.brand-logo {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.brand-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.titlebar .menus {
+  justify-self: center;
+  display: flex;
+  gap: 2px;
+}
+.tb-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: stretch;
+}
+.tb-spacer {
+  flex: 1;
+  align-self: stretch;
+}
+.win-controls {
+  display: flex;
+  align-self: stretch;
+}
+.win-controls button {
+  width: 44px;
+  border-radius: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+.win-controls button:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--text);
+}
+.win-controls button.close:hover {
+  background: #e81123;
+  color: #fff;
+}
+.win-controls svg {
+  width: 10px;
+  height: 10px;
 }
 .menu {
   position: relative;
@@ -694,7 +719,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 
 @media print {
-  .menubar, .tabs, .toc-popup, .pane:first-child, .split, .status, .dialog-backdrop { display: none !important; }
+  .titlebar, .tabs, .toc-popup, .pane:first-child, .split, .status, .dialog-backdrop { display: none !important; }
   .workspace, .panes, .pane, .preview-host { display: block !important; height: auto !important; overflow: visible !important; }
   .shell { overflow: visible; }
   /* 打印时隐藏所有装饰层 */

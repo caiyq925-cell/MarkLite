@@ -32,6 +32,8 @@
   let debounceHandle = 0;
   let unlistenOpen: UnlistenFn | undefined;
   let unlistenClose: UnlistenFn | undefined;
+  let unlistenResized: UnlistenFn | undefined;
+  let maximized = $state(false);
 
   const active = $derived(tabs.find((t) => t.id === activeId) ?? null);
   const dark = $derived(
@@ -358,6 +360,19 @@
     window.print();
   }
 
+  function minimizeWindow() {
+    void getCurrentWindow().minimize();
+  }
+
+  function toggleMaximizeWindow() {
+    void getCurrentWindow().toggleMaximize();
+  }
+
+  // 走 close() 以触发 onCloseRequested 的未保存检查流程
+  function closeWindow() {
+    void getCurrentWindow().close();
+  }
+
   function onZoomMouseDown(e: MouseEvent) {
     e.preventDefault();
   }
@@ -463,6 +478,14 @@
       for (const p of ev.payload ?? []) await openPath(p);
     });
     const win = getCurrentWindow();
+    try {
+      maximized = await win.isMaximized();
+      unlistenResized = await win.onResized(async () => {
+        maximized = await getCurrentWindow().isMaximized();
+      });
+    } catch {
+      /* web preview */
+    }
     unlistenClose = await win.onCloseRequested(async (event) => {
       event.preventDefault();
       const ok = await closeWindowFlow();
@@ -490,12 +513,28 @@
     window.removeEventListener("resize", onTocResize);
     unlistenOpen?.();
     unlistenClose?.();
+    unlistenResized?.();
     editor?.destroy();
   });
 </script>
 
 <div class="shell" ondragover={(e) => e.preventDefault()} ondrop={onDrop} role="application">
-  <div class="menubar">
+  <header class="titlebar" data-tauri-drag-region>
+    <div class="tb-left" data-tauri-drag-region>
+      <svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="var(--accent)" />
+        <path
+          d="M7 16.5v-9l5 5 5-5v9"
+          fill="none"
+          stroke="var(--accent-fg)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <span class="brand-name" data-tauri-drag-region>MarkLite</span>
+    </div>
+
     <div class="menus">
     <div class="menu">
       <button type="button">文件</button>
@@ -525,10 +564,31 @@
       </div>
     </div>
     </div>
-    <div class="toolbar">
-      <!-- 移除源码/预览开关 -->
+
+    <div class="tb-right">
+      <div class="tb-spacer" data-tauri-drag-region></div>
+      <div class="win-controls">
+        <button type="button" title="最小化" onclick={minimizeWindow}>
+          <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5.5h8" stroke="currentColor" stroke-width="1" /></svg>
+        </button>
+        <button type="button" title={maximized ? "还原" : "最大化"} onclick={toggleMaximizeWindow}>
+          {#if maximized}
+            <svg viewBox="0 0 10 10" aria-hidden="true">
+              <rect x="1" y="3" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1" />
+              <path d="M3.5 3V1h5.5v5.5H7" fill="none" stroke="currentColor" stroke-width="1" />
+            </svg>
+          {:else}
+            <svg viewBox="0 0 10 10" aria-hidden="true">
+              <rect x="1" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1" />
+            </svg>
+          {/if}
+        </button>
+        <button type="button" class="close" title="关闭" onclick={closeWindow}>
+          <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1" /></svg>
+        </button>
+      </div>
     </div>
-  </div>
+  </header>
 
   <div class="tabs">
     {#each tabs as tab (tab.id)}
