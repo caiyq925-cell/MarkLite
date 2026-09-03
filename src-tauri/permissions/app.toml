@@ -1,0 +1,13 @@
+[[permission]]
+identifier = "app-commands"
+description = "Allow MarkLite IPC commands"
+commands.allow = [
+  "get_argv",
+  "read_file",
+  "write_file",
+  "pick_open",
+  "pick_save",
+  "set_asset_root",
+  "get_config",
+  "set_config"
+]

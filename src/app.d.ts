@@ -1,0 +1,19 @@
+/// <reference types="svelte" />
+
+declare module "*.svelte" {
+  import type { Component } from "svelte";
+  const component: Component;
+  export default component;
+}
+
+declare module "markdown-it-task-lists" {
+  import type { PluginSimple } from "markdown-it";
+  const plugin: PluginSimple;
+  export default plugin;
+}
+
+declare module "markdown-it-footnote" {
+  import type { PluginSimple } from "markdown-it";
+  const plugin: PluginSimple;
+  export default plugin;
+}

@@ -92,6 +92,7 @@
 **/target/
 **/go.work
 **/Cargo.lock
+!src-tauri/Cargo.lock
 
 # Ruby
 *.gem
