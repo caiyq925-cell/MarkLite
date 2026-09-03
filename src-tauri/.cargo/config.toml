@@ -1,0 +1,9 @@
+# 国内镜像加速（rsproxy.cn）。CI 与本地构建均可使用；如需还原直连 crates.io，删除本文件即可。
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[net]
+git-fetch-with-cli = true

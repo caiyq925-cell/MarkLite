@@ -12,6 +12,7 @@
   let tocOpen = $state(false);
   let activeHeadingId = $state<string | null>(null);
   let tocPos = $state({ x: 8, y: 40 });
+  let railRight = $state(24);
   let blockRemote = $state(false);
   let entityIntensity = $state<"aggressive" | "conservative">("aggressive");
   let entityBlacklist = $state<string[]>([]);
@@ -27,8 +28,9 @@
   let editorHost: HTMLDivElement | undefined = $state();
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
-  let tocTriggerEl: HTMLButtonElement | undefined = $state();
+  let tocRailEl: HTMLDivElement | undefined = $state();
   let tocPanelEl: HTMLDivElement | undefined = $state();
+  let tocCloseTimer = 0;
   let debounceHandle = 0;
   let unlistenOpen: UnlistenFn | undefined;
   let unlistenClose: UnlistenFn | undefined;
@@ -298,27 +300,48 @@
 
   const TOC_PANEL_WIDTH = 260;
 
-  function positionToc() {
-    const rect = tocTriggerEl?.getBoundingClientRect();
-    if (!rect) return;
-    const x = Math.max(8, Math.min(rect.left, window.innerWidth - TOC_PANEL_WIDTH - 8));
-    tocPos = { x, y: rect.bottom + 4 };
+  // 胶囊避开编辑器原生滚动条：滚动条宽度 = offsetWidth - clientWidth
+  function updateRailPos() {
+    if (!editor) return;
+    const sb = editor.view.scrollDOM.offsetWidth - editor.view.scrollDOM.clientWidth;
+    railRight = Math.max(20, sb + 6);
   }
 
-  function toggleToc() {
+  function positionToc() {
+    if (!tocRailEl) return;
+    const rect = tocRailEl.getBoundingClientRect();
+    const x = Math.max(8, rect.left - TOC_PANEL_WIDTH - 8);
+    const cy = Math.min(window.innerHeight - 140, Math.max(140, rect.top + rect.height / 2));
+    tocPos = { x, y: cy };
+  }
+
+  function openTocFromRail() {
+    window.clearTimeout(tocCloseTimer);
     if (!tocOpen) positionToc();
-    tocOpen = !tocOpen;
+    tocOpen = true;
+  }
+
+  function scheduleTocClose() {
+    window.clearTimeout(tocCloseTimer);
+    tocCloseTimer = window.setTimeout(() => {
+      tocOpen = false;
+    }, 300);
+  }
+
+  function cancelTocClose() {
+    window.clearTimeout(tocCloseTimer);
   }
 
   function onTocPointerDown(e: PointerEvent) {
     if (!tocOpen) return;
     const target = e.target as Node;
     if (tocPanelEl?.contains(target)) return;
-    if (tocTriggerEl?.contains(target)) return;
+    if (tocRailEl?.contains(target)) return;
     tocOpen = false;
   }
 
   function onTocResize() {
+    updateRailPos();
     if (tocOpen) positionToc();
   }
 
@@ -388,6 +411,7 @@
   function onKey(e: KeyboardEvent) {
     const ctrl = e.ctrlKey || e.metaKey;
     if (e.key === "Escape" && tocOpen) {
+      cancelTocClose();
       tocOpen = false;
       return;
     }
@@ -459,6 +483,7 @@
       editor.setText(tab.text, tab.readonlyPlain);
     }
     boundId = tab.id;
+    updateRailPos();
   });
 
   onMount(async () => {
@@ -511,6 +536,7 @@
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("pointerdown", onTocPointerDown);
     window.removeEventListener("resize", onTocResize);
+    window.clearTimeout(tocCloseTimer);
     unlistenOpen?.();
     unlistenClose?.();
     unlistenResized?.();
@@ -548,7 +574,6 @@
     <div class="menu">
       <button type="button">视图</button>
       <div class="menu-panel">
-        <button type="button" bind:this={tocTriggerEl} onclick={() => toggleToc()}>大纲</button>
         <button type="button" onclick={() => { blockRemote = !blockRemote; }}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
         </button>
@@ -615,8 +640,38 @@
     </div>
   {/if}
 
+  {#if active && headings.length > 0}
+    <div
+      class="toc-rail"
+      bind:this={tocRailEl}
+      style="right:{railRight}px"
+      role="navigation"
+      aria-label="大纲导航"
+      onmouseenter={openTocFromRail}
+      onmouseleave={scheduleTocClose}
+    >
+      {#each headings as h (h.id)}
+        <button
+          type="button"
+          class="rail-dot"
+          class:active={h.id === activeHeadingId}
+          title={h.text}
+          onclick={() => jumpHeading(h)}
+        ></button>
+      {/each}
+    </div>
+  {/if}
+
   {#if tocOpen && active}
-    <div class="toc-popup" bind:this={tocPanelEl} style="left:{tocPos.x}px; top:{tocPos.y}px">
+    <div
+      class="toc-popup"
+      bind:this={tocPanelEl}
+      style="left:{tocPos.x}px; top:{tocPos.y}px"
+      role="navigation"
+      aria-label="大纲面板"
+      onmouseenter={cancelTocClose}
+      onmouseleave={scheduleTocClose}
+    >
       <div class="toc-header">
         <h2>大纲</h2>
         <button class="toc-close" type="button" title="关闭大纲" onclick={() => (tocOpen = false)}>×</button>
