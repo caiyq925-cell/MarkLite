@@ -28,12 +28,19 @@
   let encodingHint = $state("");
   let editorHost: HTMLDivElement | undefined = $state();
   let previewHost: HTMLDivElement | undefined = $state();
-  let zoomedDiagram = $state<{ svg: SVGSVGElement; scale: number } | null>(null);
+  let zoomedDiagram = $state<{ svg: SVGSVGElement; scale: number; panX: number; panY: number } | null>(null);
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
   let dragging = false;
+  let tocDragging = false;
+  let tocWidth = $state(220);
   let syncing = false;
   let debounceHandle = 0;
+  let zoomDragStartX = 0;
+  let zoomDragStartY = 0;
+  let zoomDragStartPanX = 0;
+  let zoomDragStartPanY = 0;
+  let isZoomDragging = false;
   let unlistenOpen: UnlistenFn | undefined;
   let unlistenClose: UnlistenFn | undefined;
 
@@ -326,7 +333,21 @@
     e.preventDefault();
   }
 
+  function onTocSplitDown(e: MouseEvent) {
+    tocDragging = true;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
   function onMouseMove(e: MouseEvent) {
+    if (tocDragging) {
+      const workspace = document.querySelector(".workspace");
+      if (!workspace) return;
+      const rect = workspace.getBoundingClientRect();
+      const newWidth = Math.min(400, Math.max(140, e.clientX - rect.left));
+      tocWidth = newWidth;
+      return;
+    }
     if (!dragging) return;
     const panes = document.querySelector(".panes");
     if (!panes) return;
@@ -337,6 +358,7 @@
 
   function onMouseUp() {
     dragging = false;
+    tocDragging = false;
   }
 
   function nextTab() {
@@ -380,7 +402,7 @@
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const cloned = svg.cloneNode(true) as SVGSVGElement;
-        zoomedDiagram = { svg: cloned, scale: 1 };
+        zoomedDiagram = { svg: cloned, scale: 1, panX: 0, panY: 0 };
       });
       wrap.appendChild(btn);
     }
@@ -393,10 +415,32 @@
     zoomedDiagram.scale = Math.min(5, Math.max(0.3, zoomedDiagram.scale * delta));
   }
 
+  function onZoomMouseDown(e: MouseEvent) {
+    if (!zoomedDiagram || e.button !== 0) return;
+    isZoomDragging = true;
+    zoomDragStartX = e.clientX;
+    zoomDragStartY = e.clientY;
+    zoomDragStartPanX = zoomedDiagram.panX;
+    zoomDragStartPanY = zoomedDiagram.panY;
+    e.stopPropagation();
+  }
+
+  function onZoomMouseMove(e: MouseEvent) {
+    if (!isZoomDragging || !zoomedDiagram) return;
+    zoomedDiagram.panX = zoomDragStartPanX + (e.clientX - zoomDragStartX);
+    zoomedDiagram.panY = zoomDragStartPanY + (e.clientY - zoomDragStartY);
+    e.stopPropagation();
+  }
+
+  function onZoomMouseUp() {
+    isZoomDragging = false;
+  }
+
   function onKey(e: KeyboardEvent) {
     const ctrl = e.ctrlKey || e.metaKey;
     if (zoomedDiagram && e.key === "Escape") {
       zoomedDiagram = null;
+      isZoomDragging = false;
       return;
     }
     if (ctrl && e.key.toLowerCase() === "o") {
@@ -533,6 +577,7 @@
 
 <div class="shell" ondragover={(e) => e.preventDefault()} ondrop={onDrop} role="application">
   <div class="menubar">
+    <div class="menus">
     <div class="menu">
       <button type="button">文件</button>
       <div class="menu-panel">
@@ -546,8 +591,6 @@
       <button type="button">视图</button>
       <div class="menu-panel">
         <button type="button" onclick={() => (tocVisible = !tocVisible)}>大纲</button>
-        <button type="button" onclick={() => (sourceVisible = !sourceVisible)}>源码</button>
-        <button type="button" onclick={() => (previewVisible = !previewVisible)}>预览</button>
         <button type="button" onclick={() => { blockRemote = !blockRemote; void refreshPreview(); }}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
         </button>
@@ -558,6 +601,15 @@
       <div class="menu-panel">
         <button type="button" onclick={() => { errorText = "MarkLite 0.1.0 — 离线 Markdown 阅读与轻编辑"; }}>关于</button>
       </div>
+    </div>
+    </div>
+    <div class="toolbar">
+      <button type="button" class:active={sourceVisible} onclick={() => (sourceVisible = !sourceVisible)}>
+        <span class="dot"></span>源码
+      </button>
+      <button type="button" class:active={previewVisible} onclick={() => (previewVisible = !previewVisible)}>
+        <span class="dot"></span>预览
+      </button>
     </div>
   </div>
 
@@ -581,21 +633,28 @@
   {:else}
     <div class="workspace">
       {#if tocVisible}
-        <aside class="toc">
-          <h2>大纲</h2>
+        <aside class="toc" style="width:{tocWidth}px">
+          <div class="toc-header">
+            <h2>大纲</h2>
+            <button class="toc-close" type="button" title="关闭大纲" onclick={() => (tocVisible = false)}>×</button>
+          </div>
           {#each headings as h}
-            <button type="button" style="padding-left:{6 + (h.level - 1) * 10}px" onclick={() => jumpHeading(h)}>
+            <button class="toc-item" type="button" style="padding-left:{6 + (h.level - 1) * 10}px" onclick={() => jumpHeading(h)}>
               {h.text}
             </button>
           {:else}
             <p>没有标题</p>
           {/each}
         </aside>
+        <div class="toc-split" onmousedown={onTocSplitDown}></div>
       {/if}
       <div class="panes">
         {#if sourceVisible}
           <div class="pane" style="flex:{previewVisible ? splitRatio : 1}">
-            <div class="pane-label">源码</div>
+            <div class="pane-label">
+              <span class="pane-label-text">源码</span>
+              <button class="pane-close" type="button" title="关闭源码" onclick={() => (sourceVisible = false)}>×</button>
+            </div>
             <div class="editor-host" bind:this={editorHost}></div>
           </div>
         {/if}
@@ -610,7 +669,10 @@
         {/if}
         {#if previewVisible}
           <div class="pane" style="flex:{sourceVisible ? 1 - splitRatio : 1}">
-            <div class="pane-label">预览</div>
+            <div class="pane-label">
+              <span class="pane-label-text">预览</span>
+              <button class="pane-close" type="button" title="关闭预览" onclick={() => (previewVisible = false)}>×</button>
+            </div>
             <div
               class="preview-host"
               bind:this={previewHost}
@@ -666,19 +728,27 @@
 {/if}
 
 {#if zoomedDiagram}
-  <div class="zoom-backdrop" onclick={() => (zoomedDiagram = null)}>
+  <div class="zoom-backdrop" onclick={() => { zoomedDiagram = null; isZoomDragging = false; }}>
     <div class="zoom-container" onclick={(e) => e.stopPropagation()}>
       <div class="zoom-header">
-        <span class="zoom-title">时序图 · 滚轮缩放，点击外部关闭</span>
+        <span class="zoom-title">时序图 · 滚轮缩放，拖动平移，点击外部关闭</span>
         <span class="zoom-scale">{(zoomedDiagram.scale * 100).toFixed(0)}%</span>
-        <button type="button" onclick={() => (zoomedDiagram = null)}>关闭</button>
+        <button type="button" onclick={() => { zoomedDiagram = null; isZoomDragging = false; }}>关闭</button>
       </div>
       <div
         class="zoom-svg-wrap"
         onwheel={handleZoomWheel}
-        style="transform: scale({zoomedDiagram.scale}); transform-origin: center center"
+        onmousedown={onZoomMouseDown}
+        onmousemove={onZoomMouseMove}
+        onmouseup={onZoomMouseUp}
+        style="cursor:{isZoomDragging ? 'grabbing' : 'grab'}"
       >
-        {@html zoomedDiagram.svg.outerHTML}
+        <div
+          class="zoom-svg-inner"
+          style="transform: translate({zoomedDiagram.panX}px, {zoomedDiagram.panY}px) scale({zoomedDiagram.scale}); transform-origin: center center"
+        >
+          {@html zoomedDiagram.svg.outerHTML}
+        </div>
       </div>
     </div>
   </div>
