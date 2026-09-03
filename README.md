@@ -61,3 +61,17 @@ npm run tauri build
 ```
 
 验收样例：`samples/kitchen-sink.md`。
+
+## CI/CD
+
+每次推送 `main` 分支会自动触发 GitHub Actions 构建 Windows 安装包（NSIS）。
+
+- **构建产物**：上传为 GitHub Actions Artifact，名称 `marklite-windows-setup`
+- **Release 发布**：创建 GitHub Release 时自动打包 `.exe` / `.msi` 作为 Draft Release 附件
+
+构建流程：`.github/workflows/build-windows.yml`
+
+```
+push main → npm ci → cargo test → tauri build → upload artifact
+tag v*      → create release (draft) with artifacts
+```
