@@ -14,6 +14,8 @@
   let splitRatio = $state(0.5);
   let tocVisible = $state(true);
   let blockRemote = $state(false);
+  let sourceVisible = $state(true);
+  let previewVisible = $state(true);
   let menu = $state<string | null>(null);
   let errorText = $state<string | null>(null);
   let prompt = $state<null | {
@@ -397,7 +399,6 @@
   $effect(() => {
     const tabId = activeId;
     const tab = tabs.find((t) => t.id === tabId) ?? null;
-    if (!editorHost) return;
     if (!tab) {
       editor?.destroy();
       editor = null;
@@ -406,7 +407,14 @@
       headings = [];
       return;
     }
-    if (boundId === tab.id) return;
+    if (!editorHost) return;
+    if (boundId === tab.id) {
+      if (editor && editor.view.dom.parentElement !== editorHost) {
+        editorHost.appendChild(editor.view.dom);
+        editor.view.requestMeasure();
+      }
+      return;
+    }
     if (!editor) {
       editor = createEditor(editorHost, tab.text, onText, tab.readonlyPlain);
       attachScroll(editor);
@@ -439,12 +447,11 @@
     });
     const win = getCurrentWindow();
     unlistenClose = await win.onCloseRequested(async (event) => {
+      event.preventDefault();
       const ok = await closeWindowFlow();
-      if (!ok) {
-        event.preventDefault();
-        return;
-      }
+      if (!ok) return;
       await persistConfig();
+      await invoke("exit_app");
     });
   });
 
@@ -476,6 +483,8 @@
       {#if menu === "view"}
         <div class="menu-panel">
           <button type="button" onclick={() => (tocVisible = !tocVisible)}>大纲</button>
+          <button type="button" onclick={() => (sourceVisible = !sourceVisible)}>源码</button>
+          <button type="button" onclick={() => (previewVisible = !previewVisible)}>预览</button>
           <button type="button" onclick={() => { blockRemote = !blockRemote; void refreshPreview(); }}>
             {blockRemote ? "允许远程图片" : "阻止远程图片"}
           </button>
@@ -524,32 +533,38 @@
         </aside>
       {/if}
       <div class="panes">
-        <div class="pane" style="flex:{splitRatio}">
-          <div class="pane-label">源码</div>
-          <div class="editor-host" bind:this={editorHost}></div>
-        </div>
-        <div
-          class="split"
-          role="separator"
-          aria-orientation="vertical"
-          tabindex="0"
-          onmousedown={onSplitDown}
-        ></div>
-        <div class="pane" style="flex:{1 - splitRatio}">
-          <div class="pane-label">预览</div>
-          <div
-            class="preview-host"
-            bind:this={previewHost}
-            onscroll={() => {
-              if (syncing || !editor || !previewHost) return;
-              syncing = true;
-              syncSourceToPreview(editor.view, headings, previewHost);
-              syncing = false;
-            }}
-          >
-            {@html previewHtml}
+        {#if sourceVisible}
+          <div class="pane" style="flex:{previewVisible ? splitRatio : 1}">
+            <div class="pane-label">源码</div>
+            <div class="editor-host" bind:this={editorHost}></div>
           </div>
-        </div>
+        {/if}
+        {#if sourceVisible && previewVisible}
+          <div
+            class="split"
+            role="separator"
+            aria-orientation="vertical"
+            tabindex="0"
+            onmousedown={onSplitDown}
+          ></div>
+        {/if}
+        {#if previewVisible}
+          <div class="pane" style="flex:{sourceVisible ? 1 - splitRatio : 1}">
+            <div class="pane-label">预览</div>
+            <div
+              class="preview-host"
+              bind:this={previewHost}
+              onscroll={() => {
+                if (syncing || !editor || !previewHost) return;
+                syncing = true;
+                syncSourceToPreview(editor.view, headings, previewHost);
+                syncing = false;
+              }}
+            >
+              {@html previewHtml}
+            </div>
+          </div>
+        {/if}
       </div>
     </div>
   {/if}

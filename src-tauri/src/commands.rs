@@ -237,6 +237,11 @@ pub fn set_config(app: AppHandle, config: AppConfig) -> Result<(), CommandError>
     Ok(())
 }
 
+#[tauri::command]
+pub fn exit_app(app: AppHandle) {
+    app.exit(0);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

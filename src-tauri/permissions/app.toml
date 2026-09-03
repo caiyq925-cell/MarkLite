@@ -9,5 +9,6 @@ commands.allow = [
   "pick_save",
   "set_asset_root",
   "get_config",
-  "set_config"
+  "set_config",
+  "exit_app"
 ]

@@ -104,6 +104,18 @@ flowchart LR
     B --> C[预览栏]
 ```
 
+时序图：
+
+```mermaid
+sequenceDiagram
+    participant 用户
+    participant MarkLite
+    用户->>MarkLite: 打开 .md 文件
+    MarkLite-->>用户: 显示源码与预览
+    用户->>MarkLite: 编辑内容
+    MarkLite-->>用户: 预览实时刷新
+```
+
 ## 图片
 
 本地相对路径：

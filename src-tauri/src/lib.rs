@@ -22,7 +22,8 @@ pub fn run() {
             commands::pick_save,
             commands::set_asset_root,
             commands::get_config,
-            commands::set_config
+            commands::set_config,
+            commands::exit_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running MarkLite");
