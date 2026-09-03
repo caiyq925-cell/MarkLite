@@ -28,6 +28,7 @@
   let encodingHint = $state("");
   let editorHost: HTMLDivElement | undefined = $state();
   let previewHost: HTMLDivElement | undefined = $state();
+  let zoomedDiagram = $state<{ svg: SVGSVGElement; scale: number } | null>(null);
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
   let dragging = false;
@@ -363,8 +364,41 @@
     }
   }
 
+  function attachMagnifiers() {
+    if (!previewHost) return;
+    previewHost.querySelectorAll(".mermaid-magnifier").forEach((el) => el.remove());
+    const diagrams = previewHost.querySelectorAll<HTMLElement>(".mermaid-svg[data-type=sequence]");
+    for (const wrap of diagrams) {
+      const svg = wrap.querySelector<SVGSVGElement>("svg");
+      if (!svg) continue;
+      if (wrap.querySelector(".mermaid-magnifier")) continue;
+      const btn = document.createElement("button");
+      btn.className = "mermaid-magnifier";
+      btn.title = "放大查看";
+      btn.type = "button";
+      btn.innerHTML = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>`;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const cloned = svg.cloneNode(true) as SVGSVGElement;
+        zoomedDiagram = { svg: cloned, scale: 1 };
+      });
+      wrap.appendChild(btn);
+    }
+  }
+
+  function handleZoomWheel(e: WheelEvent) {
+    if (!zoomedDiagram) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    zoomedDiagram.scale = Math.min(5, Math.max(0.3, zoomedDiagram.scale * delta));
+  }
+
   function onKey(e: KeyboardEvent) {
     const ctrl = e.ctrlKey || e.metaKey;
+    if (zoomedDiagram && e.key === "Escape") {
+      zoomedDiagram = null;
+      return;
+    }
     if (ctrl && e.key.toLowerCase() === "o") {
       e.preventDefault();
       void chooseOpen();
@@ -398,6 +432,12 @@
   $effect(() => {
     void active;
     void setTitle();
+  });
+
+  $effect(() => {
+    if (previewHtml) {
+      requestAnimationFrame(() => attachMagnifiers());
+    }
   });
 
   function attachScroll(handle: EditorHandle) {
@@ -620,6 +660,25 @@
       <p>{errorText}</p>
       <div class="dialog-actions">
         <button class="primary" type="button" onclick={() => (errorText = null)}>确定</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if zoomedDiagram}
+  <div class="zoom-backdrop" onclick={() => (zoomedDiagram = null)}>
+    <div class="zoom-container" onclick={(e) => e.stopPropagation()}>
+      <div class="zoom-header">
+        <span class="zoom-title">时序图 · 滚轮缩放，点击外部关闭</span>
+        <span class="zoom-scale">{(zoomedDiagram.scale * 100).toFixed(0)}%</span>
+        <button type="button" onclick={() => (zoomedDiagram = null)}>关闭</button>
+      </div>
+      <div
+        class="zoom-svg-wrap"
+        onwheel={handleZoomWheel}
+        style="transform: scale({zoomedDiagram.scale}); transform-origin: center center"
+      >
+        {@html zoomedDiagram.svg.outerHTML}
       </div>
     </div>
   </div>

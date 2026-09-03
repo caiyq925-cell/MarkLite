@@ -164,6 +164,9 @@ async function renderMermaidBlocks(html: string, dark: boolean): Promise<string>
         }
         const wrap = document.createElement("div");
         wrap.className = "mermaid-svg";
+        if (/^\s*sequenceDiagram/i.test(src)) {
+          wrap.dataset.type = "sequence";
+        }
         wrap.innerHTML = result.svg;
         host.replaceWith(wrap);
       } catch (err) {
