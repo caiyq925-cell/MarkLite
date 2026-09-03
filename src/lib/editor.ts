@@ -3,6 +3,12 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirro
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { search, searchKeymap, openSearchPanel, closeSearchPanel } from "@codemirror/search";
+import { inlineFencePlugin } from "./cm/inline-fence";
+import { blockGutter } from "./cm/block-gutter";
+import { asideMarkPlugin } from "./cm/aside-mark";
+import { statusProbePlugin, computeStatusPayload } from "./cm/status-probe";
+import type { EntityIntensity } from "./cm/types";
+import type { StatusPayload } from "./cm/types";
 
 export interface EditorHandle {
   view: EditorView;
@@ -19,7 +25,11 @@ export function createEditor(
   initial: string,
   onChange: (text: string) => void,
   readonly = false,
+  intensity: EntityIntensity = "aggressive",
+  blacklist: string[] = [],
+  onStatus?: (payload: StatusPayload) => void,
 ): EditorHandle {
+  const statusCallback = onStatus;
   const extensions = [
     lineNumbers(),
     highlightActiveLine(),
@@ -33,6 +43,21 @@ export function createEditor(
       "&": { height: "100%" },
       ".cm-scroller": { overflow: "auto" },
     }),
+    // 装饰层插件
+    inlineFencePlugin(),
+    blockGutter(),
+    asideMarkPlugin(),
+    statusProbePlugin(intensity, blacklist),
+    ...(statusCallback
+      ? [
+          EditorView.updateListener.of((u) => {
+            if (u.selectionSet || u.docChanged) {
+              const payload = computeStatusPayload(u.view, intensity, blacklist);
+              statusCallback(payload);
+            }
+          }),
+        ]
+      : []),
   ];
   if (!readonly) extensions.push(markdown());
   extensions.push(EditorState.readOnly.of(readonly));
@@ -64,6 +89,11 @@ export function createEditor(
               "&": { height: "100%" },
               ".cm-scroller": { overflow: "auto" },
             }),
+            // 装饰层插件
+            inlineFencePlugin(),
+            blockGutter(),
+            asideMarkPlugin(),
+            statusProbePlugin(intensity, blacklist),
             ...(nextReadonly ? [] : [markdown()]),
             EditorState.readOnly.of(nextReadonly),
           ],

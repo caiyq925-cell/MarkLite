@@ -12,6 +12,18 @@
   --code-bg: #2B2622;
   --tab-active: #FCF9F6;
   --shadow: 0 1px 3px rgb(45 36 30 / 8%);
+  /* 实体语义色 */
+  --entity-class: #C47A20;
+  --entity-table: #2E8B57;
+  --entity-method: #1E6FA0;
+  --entity-aside: #5A6B7A;
+  /* 行内装饰 */
+  --fence-chip-bg: color-mix(in srgb, var(--text) 7%, transparent);
+  --fence-chip-border: color-mix(in srgb, var(--text) 15%, transparent);
+  --fence-chip-text: var(--text);
+  --aside-glass-bg: color-mix(in srgb, var(--entity-aside) 10%, var(--bg));
+  --aside-glass-border: color-mix(in srgb, var(--entity-aside) 25%, transparent);
+  --aside-glass-text: var(--entity-aside);
   color-scheme: light;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
   font-size: 15px;
@@ -37,6 +49,18 @@
     --code-bg: #2B2622;
     --tab-active: #262120;
     --shadow: 0 1px 3px rgb(0 0 0 / 40%);
+    /* 实体语义色 (dark) */
+    --entity-class: #E8A030;
+    --entity-table: #4DB87A;
+    --entity-method: #5AAEE8;
+    --entity-aside: #8A9BA8;
+    /* 行内装饰 */
+    --fence-chip-bg: color-mix(in srgb, #FFFFFF 8%, transparent);
+    --fence-chip-border: color-mix(in srgb, #FFFFFF 15%, transparent);
+    --fence-chip-text: var(--text);
+    --aside-glass-bg: color-mix(in srgb, var(--entity-aside) 12%, var(--bg));
+    --aside-glass-border: color-mix(in srgb, var(--entity-aside) 30%, transparent);
+    --aside-glass-text: var(--entity-aside);
     color-scheme: dark;
   }
   ::selection {
@@ -517,8 +541,113 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   transform-origin: center center;
 }
 
+.editor-full {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .cm-editor { height: 100%; outline: none; }
 .cm-editor .cm-scroller { font-family: "Cascadia Code", Consolas, "Microsoft YaHei Mono", monospace; font-size: 14px; }
+
+/* ---- 实体语义着色 ---- */
+.cm-entity-class { color: var(--entity-class); font-weight: 600; }
+.cm-entity-table { color: var(--entity-table); text-decoration: underline wavy var(--entity-table); text-underline-offset: 3px; }
+.cm-entity-method { color: var(--entity-method); }
+
+/* ---- 行内围栏 ---- */
+.cm-inline-bold { font-weight: 700; }
+.cm-inline-italic { font-style: italic; }
+.cm-inline-italic-zh { color: #7A5A3A; }
+@media (prefers-color-scheme: dark) {
+  .cm-inline-italic-zh { color: #C49A6A; }
+}
+.cm-inline-code-chip {
+  background: var(--fence-chip-bg);
+  border: 1px solid var(--fence-chip-border);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.88em;
+  color: var(--fence-chip-text);
+  white-space: nowrap;
+}
+
+/* ---- 旁白装饰 ---- */
+.cm-aside {
+  color: var(--aside-glass-text);
+  font-style: italic;
+  background: var(--aside-glass-bg);
+  border: 1px solid var(--aside-glass-border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  display: inline;
+}
+.cm-aside-overlong {
+  border-bottom-style: dashed;
+  border-bottom-width: 2px;
+}
+.cm-aside-fence { display: none; }
+
+/* ---- 块级 Gutter ---- */
+.cm-block-gutter {
+  width: 32px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  user-select: none;
+}
+.cm-gutter-heading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 18px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 10px;
+  cursor: pointer;
+}
+.cm-gutter-heading:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.cm-gutter-list {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--muted) 15%, transparent);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cm-gutter-blockquote {
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: var(--muted);
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
+/* ---- 状态栏 ---- */
+.cm-status-slice {
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  display: inline-block;
+  vertical-align: middle;
+}
 
 .hljs {
   color: #ECE4DC;
@@ -558,4 +687,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   .menubar, .tabs, .toc, .toc-split, .pane:first-child, .split, .status, .dialog-backdrop { display: none !important; }
   .workspace, .panes, .pane, .preview-host { display: block !important; height: auto !important; overflow: visible !important; }
   .shell { overflow: visible; }
+  /* 打印时隐藏所有装饰层 */
+  .cm-inline-bold, .cm-inline-italic, .cm-inline-italic-zh,
+  .cm-inline-code-chip, .cm-aside, .cm-aside-overlong,
+  .cm-entity-class, .cm-entity-table, .cm-entity-method,
+  .cm-block-gutter, .cm-gutter-heading, .cm-gutter-list, .cm-gutter-blockquote,
+  .cm-status-slice { display: none !important; }
+  .cm-editor { height: auto !important; }
+  .cm-scroller { overflow: visible !important; }
 }

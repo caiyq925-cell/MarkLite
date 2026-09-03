@@ -6,17 +6,13 @@
   import type { AppConfig, DocumentTab, Heading, ReadFileResult } from "./lib/types";
   import { createEditor, type EditorHandle } from "./lib/editor";
   import { extractHeadings } from "./lib/toc";
-  import { renderPreview } from "./lib/preview";
-  import { syncPreviewToSource, syncSourceToPreview } from "./lib/sync-scroll";
-  import { openUrl } from "@tauri-apps/plugin-opener";
 
   let tabs = $state<DocumentTab[]>([]);
   let activeId = $state<string | null>(null);
-  let splitRatio = $state(0.5);
   let tocVisible = $state(true);
   let blockRemote = $state(false);
-  let sourceVisible = $state(true);
-  let previewVisible = $state(true);
+  let entityIntensity = $state<"aggressive" | "conservative">("aggressive");
+  let entityBlacklist = $state<string[]>([]);
   let errorText = $state<string | null>(null);
   let prompt = $state<null | {
     title: string;
@@ -27,20 +23,12 @@
   let headings = $state<Heading[]>([]);
   let encodingHint = $state("");
   let editorHost: HTMLDivElement | undefined = $state();
-  let previewHost: HTMLDivElement | undefined = $state();
-  let zoomedDiagram = $state<{ svg: SVGSVGElement; scale: number; panX: number; panY: number } | null>(null);
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
   let dragging = false;
   let tocDragging = false;
   let tocWidth = $state(220);
-  let syncing = false;
   let debounceHandle = 0;
-  let zoomDragStartX = 0;
-  let zoomDragStartY = 0;
-  let zoomDragStartPanX = 0;
-  let zoomDragStartPanY = 0;
-  let isZoomDragging = false;
   let unlistenOpen: UnlistenFn | undefined;
   let unlistenClose: UnlistenFn | undefined;
 
@@ -84,9 +72,11 @@
     const maximized = await win.isMaximized();
     const cfg: AppConfig = {
       window: { x: pos.x, y: pos.y, w: size.width, h: size.height, maximized },
-      splitRatio,
+      splitRatio: 0.5,
       tocVisible,
       blockRemoteImages: blockRemote,
+      entityIntensity,
+      entityBlacklist,
     };
     await invoke("set_config", { config: cfg });
   }
@@ -94,9 +84,10 @@
   async function loadConfig() {
     try {
       const cfg = await invoke<AppConfig>("get_config");
-      splitRatio = Math.min(0.8, Math.max(0.2, cfg.splitRatio ?? 0.5));
       tocVisible = cfg.tocVisible ?? true;
       blockRemote = cfg.blockRemoteImages ?? false;
+      entityIntensity = cfg.entityIntensity ?? "aggressive";
+      entityBlacklist = cfg.entityBlacklist ?? [];
     } catch {
       /* keep defaults */
     }
@@ -141,7 +132,7 @@
           title: "文件过大",
           body: `${titleOf(path)} 超过 10 MiB。是否仍以纯文本只读方式打开？`,
           actions: [
-            { label: "取消", run: () => (prompt = null) },
+            { label: "取消", run: () => { prompt = null; } },
             {
               label: "只读打开",
               kind: "primary",
@@ -296,41 +287,10 @@
     tabs = tabs.map((t) =>
       t.id === active.id ? { ...t, text, dirty: text !== t.lastSavedText } : t,
     );
-    window.clearTimeout(debounceHandle);
-    debounceHandle = window.setTimeout(() => refreshPreview(), 300);
-  }
-
-  async function refreshPreview() {
-    if (!active) {
-      previewHtml = "";
-      headings = [];
-      return;
-    }
-    headings = extractHeadings(active.text);
-    if (active.readonlyPlain) {
-      previewHtml = `<pre>${escapeHtml(active.text)}</pre>`;
-      return;
-    }
-    previewHtml = await renderPreview(active.text, {
-      docDir: parentDir(active.path),
-      blockRemote,
-      dark,
-    });
-  }
-
-  function escapeHtml(s: string): string {
-    return s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   }
 
   function jumpHeading(h: Heading) {
     editor?.scrollToLine(h.sourceLine + 1);
-    const el = previewHost?.querySelector(`#${CSS.escape(h.id)}`);
-    el?.scrollIntoView({ block: "start" });
-  }
-
-  function onSplitDown(e: MouseEvent) {
-    dragging = true;
-    e.preventDefault();
   }
 
   function onTocSplitDown(e: MouseEvent) {
@@ -340,24 +300,15 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    if (tocDragging) {
-      const workspace = document.querySelector(".workspace");
-      if (!workspace) return;
-      const rect = workspace.getBoundingClientRect();
-      const newWidth = Math.min(400, Math.max(140, e.clientX - rect.left));
-      tocWidth = newWidth;
-      return;
-    }
-    if (!dragging) return;
-    const panes = document.querySelector(".panes");
-    if (!panes) return;
-    const rect = panes.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    splitRatio = Math.min(0.8, Math.max(0.2, ratio));
+    if (!tocDragging) return;
+    const workspace = document.querySelector(".workspace");
+    if (!workspace) return;
+    const rect = workspace.getBoundingClientRect();
+    const newWidth = Math.min(400, Math.max(140, e.clientX - rect.left));
+    tocWidth = newWidth;
   }
 
   function onMouseUp() {
-    dragging = false;
     tocDragging = false;
   }
 
@@ -371,78 +322,20 @@
     window.print();
   }
 
-  async function onPreviewClick(e: MouseEvent) {
-    const target = e.target as HTMLElement;
-    const a = target.closest("a");
-    if (!a) return;
-    const href = a.getAttribute("href") ?? "";
-    if (/^https?:\/\//i.test(href) || /^mailto:/i.test(href)) {
-      e.preventDefault();
-      try {
-        await openUrl(href);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-
-  function attachMagnifiers() {
-    if (!previewHost) return;
-    previewHost.querySelectorAll(".mermaid-magnifier").forEach((el) => el.remove());
-    const diagrams = previewHost.querySelectorAll<HTMLElement>(".mermaid-svg[data-type=sequence]");
-    for (const wrap of diagrams) {
-      const svg = wrap.querySelector<SVGSVGElement>("svg");
-      if (!svg) continue;
-      if (wrap.querySelector(".mermaid-magnifier")) continue;
-      const btn = document.createElement("button");
-      btn.className = "mermaid-magnifier";
-      btn.title = "放大查看";
-      btn.type = "button";
-      btn.innerHTML = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>`;
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const cloned = svg.cloneNode(true) as SVGSVGElement;
-        zoomedDiagram = { svg: cloned, scale: 1, panX: 0, panY: 0 };
-      });
-      wrap.appendChild(btn);
-    }
-  }
-
-  function handleZoomWheel(e: WheelEvent) {
-    if (!zoomedDiagram) return;
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    zoomedDiagram.scale = Math.min(5, Math.max(0.3, zoomedDiagram.scale * delta));
-  }
-
   function onZoomMouseDown(e: MouseEvent) {
-    if (!zoomedDiagram || e.button !== 0) return;
-    isZoomDragging = true;
-    zoomDragStartX = e.clientX;
-    zoomDragStartY = e.clientY;
-    zoomDragStartPanX = zoomedDiagram.panX;
-    zoomDragStartPanY = zoomedDiagram.panY;
-    e.stopPropagation();
+    e.preventDefault();
   }
 
   function onZoomMouseMove(e: MouseEvent) {
-    if (!isZoomDragging || !zoomedDiagram) return;
-    zoomedDiagram.panX = zoomDragStartPanX + (e.clientX - zoomDragStartX);
-    zoomedDiagram.panY = zoomDragStartPanY + (e.clientY - zoomDragStartY);
-    e.stopPropagation();
+    e.preventDefault();
   }
 
   function onZoomMouseUp() {
-    isZoomDragging = false;
+    // no-op
   }
 
   function onKey(e: KeyboardEvent) {
     const ctrl = e.ctrlKey || e.metaKey;
-    if (zoomedDiagram && e.key === "Escape") {
-      zoomedDiagram = null;
-      isZoomDragging = false;
-      return;
-    }
     if (ctrl && e.key.toLowerCase() === "o") {
       e.preventDefault();
       void chooseOpen();
@@ -478,19 +371,8 @@
     void setTitle();
   });
 
-  $effect(() => {
-    if (previewHtml) {
-      requestAnimationFrame(() => attachMagnifiers());
-    }
-  });
-
   function attachScroll(handle: EditorHandle) {
-    handle.view.scrollDOM.addEventListener("scroll", () => {
-      if (syncing || !previewHost) return;
-      syncing = true;
-      syncPreviewToSource(handle.view, headings, previewHost);
-      syncing = false;
-    });
+    // 用于 TOC 滚动同步（如需）
   }
 
   $effect(() => {
@@ -500,14 +382,12 @@
       editor?.destroy();
       editor = null;
       boundId = null;
-      previewHtml = "";
       headings = [];
       return;
     }
     encodingHint =
       tab.encoding === "gbk" ? "已按 GBK 打开，保存将写 UTF-8" : tab.bom ? "UTF-8 BOM" : "UTF-8";
     headings = extractHeadings(tab.text);
-    void refreshPreview();
     void invoke("set_asset_root", { dir: parentDir(tab.path) });
 
     if (!editorHost) return;
@@ -519,7 +399,10 @@
       return;
     }
     if (!editor) {
-      editor = createEditor(editorHost, tab.text, onText, tab.readonlyPlain);
+      editor = createEditor(editorHost, tab.text, onText, tab.readonlyPlain, entityIntensity, entityBlacklist, (payload) => {
+        const el = document.getElementById("status-info");
+        if (el) el.textContent = payload.rawSnippet || "";
+      });
       attachScroll(editor);
     } else {
       editor.setText(tab.text, tab.readonlyPlain);
@@ -591,8 +474,11 @@
       <button type="button">视图</button>
       <div class="menu-panel">
         <button type="button" onclick={() => (tocVisible = !tocVisible)}>大纲</button>
-        <button type="button" onclick={() => { blockRemote = !blockRemote; void refreshPreview(); }}>
+        <button type="button" onclick={() => { blockRemote = !blockRemote; }}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
+        </button>
+        <button type="button" onclick={() => (entityIntensity = entityIntensity === "aggressive" ? "conservative" : "aggressive")}>
+          实体着色: {entityIntensity === "aggressive" ? "激进" : "保守"}
         </button>
       </div>
     </div>
@@ -604,12 +490,7 @@
     </div>
     </div>
     <div class="toolbar">
-      <button type="button" class:active={sourceVisible} onclick={() => (sourceVisible = !sourceVisible)}>
-        <span class="dot"></span>源码
-      </button>
-      <button type="button" class:active={previewVisible} onclick={() => (previewVisible = !previewVisible)}>
-        <span class="dot"></span>预览
-      </button>
+      <!-- 移除源码/预览开关 -->
     </div>
   </div>
 
@@ -648,46 +529,8 @@
         </aside>
         <div class="toc-split" onmousedown={onTocSplitDown}></div>
       {/if}
-      <div class="panes">
-        {#if sourceVisible}
-          <div class="pane" style="flex:{previewVisible ? splitRatio : 1}">
-            <div class="pane-label">
-              <span class="pane-label-text">源码</span>
-              <button class="pane-close" type="button" title="关闭源码" onclick={() => (sourceVisible = false)}>×</button>
-            </div>
-            <div class="editor-host" bind:this={editorHost}></div>
-          </div>
-        {/if}
-        {#if sourceVisible && previewVisible}
-          <div
-            class="split"
-            role="separator"
-            aria-orientation="vertical"
-            tabindex="0"
-            onmousedown={onSplitDown}
-          ></div>
-        {/if}
-        {#if previewVisible}
-          <div class="pane" style="flex:{sourceVisible ? 1 - splitRatio : 1}">
-            <div class="pane-label">
-              <span class="pane-label-text">预览</span>
-              <button class="pane-close" type="button" title="关闭预览" onclick={() => (previewVisible = false)}>×</button>
-            </div>
-            <div
-              class="preview-host"
-              bind:this={previewHost}
-              onclick={onPreviewClick}
-              onscroll={() => {
-                if (syncing || !editor || !previewHost) return;
-                syncing = true;
-                syncSourceToPreview(editor.view, headings, previewHost);
-                syncing = false;
-              }}
-            >
-              {@html previewHtml}
-            </div>
-          </div>
-        {/if}
+      <div class="editor-full">
+        <div class="editor-host" bind:this={editorHost}></div>
       </div>
     </div>
   {/if}
@@ -695,6 +538,7 @@
   <div class="status">
     <span class="path" title={active?.path ?? ""}>{active ? ellipsisPath(active.path) : "未打开文档"}</span>
     <span>{encodingHint}</span>
+    <span id="status-info"></span>
     <span>{active ? `${active.text.length} 字符` : ""}</span>
   </div>
 </div>
@@ -722,33 +566,6 @@
       <p>{errorText}</p>
       <div class="dialog-actions">
         <button class="primary" type="button" onclick={() => (errorText = null)}>确定</button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-{#if zoomedDiagram}
-  <div class="zoom-backdrop" onclick={() => { zoomedDiagram = null; isZoomDragging = false; }}>
-    <div class="zoom-container" onclick={(e) => e.stopPropagation()}>
-      <div class="zoom-header">
-        <span class="zoom-title">时序图 · 滚轮缩放，拖动平移，点击外部关闭</span>
-        <span class="zoom-scale">{(zoomedDiagram.scale * 100).toFixed(0)}%</span>
-        <button type="button" onclick={() => { zoomedDiagram = null; isZoomDragging = false; }}>关闭</button>
-      </div>
-      <div
-        class="zoom-svg-wrap"
-        onwheel={handleZoomWheel}
-        onmousedown={onZoomMouseDown}
-        onmousemove={onZoomMouseMove}
-        onmouseup={onZoomMouseUp}
-        style="cursor:{isZoomDragging ? 'grabbing' : 'grab'}"
-      >
-        <div
-          class="zoom-svg-inner"
-          style="transform: translate({zoomedDiagram.panX}px, {zoomedDiagram.panY}px) scale({zoomedDiagram.scale}); transform-origin: center center"
-        >
-          {@html zoomedDiagram.svg.outerHTML}
-        </div>
       </div>
     </div>
   </div>

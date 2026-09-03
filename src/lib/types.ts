@@ -25,11 +25,15 @@ export interface WindowGeom {
   maximized: boolean;
 }
 
+export type EntityIntensity = "aggressive" | "conservative";
+
 export interface AppConfig {
   window?: WindowGeom | null;
   splitRatio: number;
   tocVisible: boolean;
   blockRemoteImages: boolean;
+  entityIntensity: EntityIntensity;
+  entityBlacklist: string[];
 }
 
 export interface DocumentTab {

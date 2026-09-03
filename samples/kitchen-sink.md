@@ -25,6 +25,18 @@
 
 [^note]: 脚注定义。
 
+## 实体着色
+
+驼峰类名（琥珀橙）：`OrderBillingService` 继承自 `AbstractPaymentController`。
+
+表名下划线（翠绿）：查询 `t_se_bu_invoice_if_log` 表中的 `_id` 字段。
+
+方法海蓝：调用 `getUserById()` 返回 `PaymentDTO` 对象。
+
+旁白（磨砂玻璃）：??这是编辑器的旁白注释，解释上面的逻辑??。
+
+行内围栏：用 `code` 包裹代码片段，**粗体**强调重点，*中文强调*不改斜体。
+
 ## 代码高亮
 
 ```bash
@@ -35,20 +47,8 @@ echo hello
 const x = 1;
 ```
 
-```js
-const y = 2;
-```
-
 ```typescript
 const z: number = 3;
-```
-
-```ts
-const w: string = "ok";
-```
-
-```json
-{ "ok": true }
 ```
 
 ```python
@@ -58,34 +58,6 @@ print("hi")
 ```go
 package main
 func main() {}
-```
-
-```rust
-fn main() {}
-```
-
-```html
-<div class="x">hi</div>
-```
-
-```css
-.x { color: teal; }
-```
-
-```yaml
-name: marklite
-```
-
-```sql
-SELECT 1;
-```
-
-```markdown
-# inner
-```
-
-```not-a-lang
-plain fence
 ```
 
 ## 公式
@@ -100,8 +72,8 @@ $$
 
 ```mermaid
 flowchart LR
-    A[打开文档] --> B[源码栏]
-    B --> C[预览栏]
+    A["打开文档"] --> B["源码栏"]
+    B --> C["预览栏"]
 ```
 
 时序图：
@@ -133,3 +105,4 @@ sequenceDiagram
 <a href="javascript:alert(1)">脚本链接</a>
 
 <img src="x" onclick="alert(1)">
+
