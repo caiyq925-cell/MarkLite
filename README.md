@@ -24,7 +24,45 @@ Windows 10/11 上的离线 Markdown 阅读与轻编辑器。安装后可双击�
 
 未做代码签名时，Windows SmartScreen 可能显示未知发布者提示。
 
-## 体积（发布时回填实测）
+## 主题系统
+
+MarkLite 支持从 `src/theme/` 目录动态加载主题，无需手动修改应用代码。
+
+### 添加新主题
+
+1. 在 `src/theme/` 目录下新建一个 `.theme.css` 文件，使用 [Monaco Editor theme](https://code.visualstudio.com/api/references/theme-color) 变量格式（至少包含 `--editorBgColor`、`--editorColor`、`--themeColor`）
+2. 运行生成脚本：
+
+```bash
+npm run themes
+```
+
+脚本会自动：
+- 解析新主题的 Monaco 变量，推断明暗与关键颜色
+- 生成对应的 MarkLite 应用层 CSS 规则（追加到 `src/themes.css`）
+- 更新 `src/lib/theme.ts` 中的主题列表
+
+3. 重新构建或启动开发服务器即可生效。应用菜单「主题」下拉会显示全部已注册主题，选择后样式实时切换。
+
+### 现有主题（33 个）
+
+| 类型 | 主题 |
+| --- | --- |
+| 内置 | Default、Dark、One Dark、Graphite、Ulysses、Material Dark |
+| Ayu | Ayu Dark、Ayu Light、Ayu Mirage |
+| Catppuccin | Catppuccin Latte、Catppuccin Mocha |
+| Dracula / Nord / Solarized | Dracula、Nord、Solarized Dark、Solarized Light |
+| Tokyo Night | Tokyo Night、Tokyo Night Storm、Tokyo Night Light |
+| Rose Pine | Rose Pine、Rose Pine Dawn、Rose Pine Moon |
+| Gruvbox | Gruvbox Dark、Gruvbox Light |
+| Everforest | Everforest Dark、Everforest Light |
+| 其他 | Cyberdream、Horizon Dark、Kanagawa、Monokai Pro、Nightfox、Oxocarbon Dark、Palenight、Synthwave 84 |
+
+### 自定义强调色
+
+在「主题」菜单下方可选择 7 种预设强调色（陶土橙、蓝、青、绿、紫、玫红、石墨），也可在开发者模式下通过 `root.style.setProperty('--accent', ...)` 自定义。
+
+---
 
 | 项 | 值 |
 | --- | --- |

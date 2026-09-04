@@ -9,20 +9,18 @@ import {
 } from "./theme";
 
 describe("theme registry", () => {
-  it("ships six named themes", () => {
-    expect(THEMES).toHaveLength(6);
-    expect(THEMES.map((t) => t.id)).toEqual([
-      "light",
-      "dark",
-      "one-dark",
-      "graphite",
-      "ulysses",
-      "material-dark",
-    ]);
+  it("ships many named themes from src/theme/", () => {
+    expect(THEMES.length).toBeGreaterThanOrEqual(20);
+    // Verify a few key themes are present
+    expect(THEMES.map((t) => t.id)).toContain("light");
+    expect(THEMES.map((t) => t.id)).toContain("dark");
+    expect(THEMES.map((t) => t.id)).toContain("catppuccin-mocha");
+    expect(THEMES.map((t) => t.id)).toContain("tokyo-night");
   });
 
   it("recognizes known and unknown theme ids", () => {
     expect(isTheme("material-dark")).toBe(true);
+    expect(isTheme("catppuccin-mocha")).toBe(true);
     expect(isTheme("nope")).toBe(false);
   });
 
@@ -31,19 +29,24 @@ describe("theme registry", () => {
     expect(isDarkTheme("graphite")).toBe(false);
     expect(isDarkTheme("dark")).toBe(true);
     expect(isDarkTheme("one-dark")).toBe(true);
+    expect(isDarkTheme("catppuccin-mocha")).toBe(true);
     expect(isDarkTheme("bogus")).toBe(false);
   });
 });
 
 describe("effectiveTheme", () => {
   it("resolves follow-system to light/dark by OS preference", () => {
-    expect(effectiveTheme("one-dark", true, false)).toBe("light");
-    expect(effectiveTheme("one-dark", true, true)).toBe("dark");
+    // When following system, picks first matching light or dark theme
+    const lightTheme = THEMES.find((t) => !t.dark)?.id ?? "light";
+    const darkTheme = THEMES.find((t) => t.dark)?.id ?? "dark";
+    expect(effectiveTheme("one-dark", true, false)).toBe(lightTheme);
+    expect(effectiveTheme("one-dark", true, true)).toBe(darkTheme);
   });
 
   it("keeps the selected theme when not following system", () => {
     expect(effectiveTheme("one-dark", false, false)).toBe("one-dark");
     expect(effectiveTheme("graphite", false, true)).toBe("graphite");
+    expect(effectiveTheme("catppuccin-mocha", false, false)).toBe("catppuccin-mocha");
   });
 
   it("falls back to light for unknown ids", () => {

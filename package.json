@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest run"
+    "test": "vitest run",
+    "themes": "tsx scripts/generate-themes.ts"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.1",
@@ -37,6 +38,7 @@
     "@types/markdown-it": "^14.1.2",
     "jsdom": "^26.1.0",
     "svelte": "^5.38.0",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.2",
     "vite": "^6.3.5",
     "vitest": "^3.2.4"

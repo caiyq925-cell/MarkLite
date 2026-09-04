@@ -4,7 +4,7 @@ export interface ThemeDef {
   dark: boolean;
 }
 
-/** 内置命名主题（与 src/themes.css 中的 data-theme 值一一对应） */
+/** Auto-generated from src/theme/*.theme.css — do not edit manually. */
 export const THEMES: ThemeDef[] = [
   { id: "light", name: "Default", dark: false },
   { id: "dark", name: "Dark", dark: true },
@@ -12,6 +12,33 @@ export const THEMES: ThemeDef[] = [
   { id: "graphite", name: "Graphite", dark: false },
   { id: "ulysses", name: "Ulysses", dark: false },
   { id: "material-dark", name: "Material Dark", dark: true },
+  { id: "ayu-dark", name: "Ayu Dark", dark: true },
+  { id: "ayu-light", name: "Ayu Light", dark: false },
+  { id: "ayu-mirage", name: "Ayu Mirage", dark: true },
+  { id: "catppuccin-latte", name: "Catppuccin Latte", dark: false },
+  { id: "catppuccin-mocha", name: "Catppuccin Mocha", dark: true },
+  { id: "cyberdream", name: "Cyberdream", dark: true },
+  { id: "dracula", name: "Dracula", dark: true },
+  { id: "everforest-dark", name: "Everforest Dark", dark: true },
+  { id: "everforest-light", name: "Everforest Light", dark: false },
+  { id: "gruvbox-dark", name: "Gruvbox Dark", dark: true },
+  { id: "gruvbox-light", name: "Gruvbox Light", dark: false },
+  { id: "horizon-dark", name: "Horizon Dark", dark: true },
+  { id: "kanagawa", name: "Kanagawa", dark: true },
+  { id: "monokai-pro", name: "Monokai Pro", dark: true },
+  { id: "nightfox", name: "Nightfox", dark: true },
+  { id: "nord", name: "Nord", dark: true },
+  { id: "oxocarbon-dark", name: "Oxocarbon Dark", dark: true },
+  { id: "palenight", name: "Palenight", dark: true },
+  { id: "rose-pine-dawn", name: "Rose Pine Dawn", dark: false },
+  { id: "rose-pine-moon", name: "Rose Pine Moon", dark: true },
+  { id: "rose-pine", name: "Rose Pine", dark: true },
+  { id: "solarized-dark", name: "Solarized Dark", dark: true },
+  { id: "solarized-light", name: "Solarized Light", dark: false },
+  { id: "synthwave-84", name: "Synthwave 84", dark: true },
+  { id: "tokyo-night-light", name: "Tokyo Night Light", dark: false },
+  { id: "tokyo-night-storm", name: "Tokyo Night Storm", dark: true },
+  { id: "tokyo-night", name: "Tokyo Night", dark: true },
 ];
 
 export interface AccentDef {
@@ -38,9 +65,14 @@ export function isDarkTheme(id: string): boolean {
   return THEMES.find((t) => t.id === id)?.dark ?? false;
 }
 
-/** 解析最终生效的主题 id（跟随系统时在 light/dark 之间选择） */
+/** 解析最终生效的主题 id（跟随系统时在首个 light/dark 主题之间选择） */
 export function effectiveTheme(theme: string, followSystem: boolean, prefersDark: boolean): string {
-  if (followSystem) return prefersDark ? "dark" : "light";
+  if (followSystem) {
+    const fallback = prefersDark
+      ? THEMES.find((t) => t.dark)?.id
+      : THEMES.find((t) => !t.dark)?.id;
+    return fallback ?? "light";
+  }
   return isTheme(theme) ? theme : "light";
 }
 
