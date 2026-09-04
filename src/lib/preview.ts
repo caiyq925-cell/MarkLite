@@ -132,7 +132,13 @@ export async function renderPreview(
   let html = renderMarkdown(source);
   html = rewriteImages(html, options.docDir, options.blockRemote);
   if (hasMermaidFence(source)) {
-    html = await renderMermaidBlocks(html, options.dark);
+    try {
+      html = await renderMermaidBlocks(html, options.dark);
+    } catch (err) {
+      // 图表渲染失败不应吞掉整个预览，保留已渲染的 Markdown 并给出提示
+      const msg = err instanceof Error ? err.message : String(err);
+      html = `<pre class="mermaid-error">图表渲染失败：${md.utils.escapeHtml(msg)}</pre>${html}`;
+    }
   }
   return html;
 }

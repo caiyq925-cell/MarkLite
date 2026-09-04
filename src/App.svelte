@@ -350,11 +350,17 @@
       previewHtml = `<pre>${active.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
       return;
     }
-    previewHtml = await renderPreview(active.text, {
-      docDir: parentDir(active.path),
-      blockRemote,
-      dark,
-    });
+    try {
+      previewHtml = await renderPreview(active.text, {
+        docDir: parentDir(active.path),
+        blockRemote,
+        dark,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const esc = msg.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      previewHtml = `<pre class="math-error">预览渲染失败：${esc}</pre>`;
+    }
   }
 
   function jumpHeading(h: Heading) {
