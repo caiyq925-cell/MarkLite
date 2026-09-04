@@ -19,6 +19,10 @@
   --aside-glass-border: color-mix(in srgb, var(--entity-aside) 25%, transparent);
   --aside-glass-text: var(--entity-aside);
 
+  /* 表格表头：用强调色给表头加一层品牌色，随主题/强调色联动换肤 */
+  --table-head-bg: color-mix(in srgb, var(--accent) 18%, var(--table-header-bg));
+  --table-head-border: color-mix(in srgb, var(--accent) 45%, var(--table-border));
+
   /* 浮层柔和阴影：MarkText 三层叠加，近黑阴影在明暗主题下均成立 */
   --float-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 3px 6px rgba(0, 0, 0, 0.06),
     0 10px 24px rgba(0, 0, 0, 0.12);
@@ -558,8 +562,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .preview-host pre code { background: transparent; border: none; color: inherit; padding: 0; border-radius: 0; }
 .preview-host table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 0 0 12px; }
-.preview-host th { background: var(--table-header-bg); color: var(--table-header-text); font-weight: 600; }
 .preview-host th, .preview-host td { border: 1px solid var(--table-border); padding: 5px 8px; }
+.preview-host th {
+  background: var(--table-head-bg);
+  color: var(--table-header-text);
+  font-weight: 600;
+  border-bottom: 2px solid var(--table-head-border);
+}
 .preview-host tr:nth-child(even) td { background: var(--table-stripe); }
 .preview-host tr:hover td { background: var(--table-hover); }
 .preview-host blockquote {
