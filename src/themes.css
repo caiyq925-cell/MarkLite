@@ -13,8 +13,8 @@
   --accent: #B45F3A;
   --accent-fg: #FFFFFF;
   --preview-bg: #FCF9F6;
-  --code-bg: #2B2622;
-  --code-text: #ECE4DC;
+  --code-bg: #F6F8FA;
+  --code-text: #24292E;
   --tab-active: #FCF9F6;
   --shadow: 0 1px 3px rgb(45 36 30 / 8%);
   --selection-bg: #EADED5;
@@ -47,14 +47,15 @@
   --entity-method: #1E6FA0;
   --entity-aside: #5A6B7A;
   --inline-italic-zh: #7A5A3A;
-  --hljs-keyword: #F5A97F;
-  --hljs-string: #B8CCB5;
-  --hljs-title: #EBCB8B;
-  --hljs-number: #D4876A;
-  --hljs-comment: #7A6B5E;
-  --hljs-variable: #D4B8A8;
-  --hljs-operator: #E5C07B;
-  --hljs-punctuation: #C0B0A0;
+  --hljs-keyword: #0077aa;
+  --hljs-string: #669900;
+  --hljs-title: #dd4a68;
+  --hljs-number: #990055;
+  --hljs-comment: #708090;
+  --hljs-property: #990055;
+  --hljs-variable: #ee9900;
+  --hljs-operator: #9a6e3a;
+  --hljs-punctuation: #999999;
 }
 
 /* ---- Dark ---- */
@@ -102,14 +103,15 @@
   --entity-method: #5AAEE8;
   --entity-aside: #8A9BA8;
   --inline-italic-zh: #C49A6A;
-  --hljs-keyword: #F5A97F;
-  --hljs-string: #B8CCB5;
-  --hljs-title: #EBCB8B;
-  --hljs-number: #D4876A;
-  --hljs-comment: #7A6B5E;
-  --hljs-variable: #D4B8A8;
-  --hljs-operator: #E5C07B;
-  --hljs-punctuation: #C0B0A0;
+  --hljs-keyword: #66d9ef;
+  --hljs-string: #a6e22e;
+  --hljs-title: #e6db74;
+  --hljs-number: #ae81ff;
+  --hljs-comment: #708090;
+  --hljs-property: #f92672;
+  --hljs-variable: #fd971f;
+  --hljs-operator: #e67e65;
+  --hljs-punctuation: #f8f8f2;
 }
 
 /* ---- One Dark ---- */
@@ -157,14 +159,15 @@
   --entity-method: #61AFEF;
   --entity-aside: #7F8C98;
   --inline-italic-zh: #C678DD;
-  --hljs-keyword: #C678DD;
-  --hljs-string: #98C379;
-  --hljs-title: #61AFEF;
-  --hljs-number: #D19A66;
-  --hljs-comment: #5C6370;
-  --hljs-variable: #E06C75;
-  --hljs-operator: #56B6C2;
-  --hljs-punctuation: #ABB2BF;
+  --hljs-keyword: #66d9ef;
+  --hljs-string: #a6e22e;
+  --hljs-title: #e6db74;
+  --hljs-number: #ae81ff;
+  --hljs-comment: #708090;
+  --hljs-property: #f92672;
+  --hljs-variable: #fd971f;
+  --hljs-operator: #e67e65;
+  --hljs-punctuation: #f8f8f2;
 }
 
 /* ---- Graphite ---- */
@@ -178,8 +181,8 @@
   --accent: #5A6B7A;
   --accent-fg: #FFFFFF;
   --preview-bg: #F5F6F7;
-  --code-bg: #2B3138;
-  --code-text: #E8ECF1;
+  --code-bg: #F6F8FA;
+  --code-text: #24292E;
   --tab-active: #F5F6F7;
   --shadow: 0 1px 3px rgb(42 49 56 / 10%);
   --selection-bg: #D5DAE0;
@@ -212,14 +215,15 @@
   --entity-method: #1E6FA0;
   --entity-aside: #5A6B7A;
   --inline-italic-zh: #6A7A8A;
-  --hljs-keyword: #B064A0;
-  --hljs-string: #4E8A6B;
-  --hljs-title: #3D6B99;
-  --hljs-number: #B0771B;
-  --hljs-comment: #7A8894;
-  --hljs-variable: #A0534F;
-  --hljs-operator: #3D6B99;
-  --hljs-punctuation: #6B7683;
+  --hljs-keyword: #0077aa;
+  --hljs-string: #669900;
+  --hljs-title: #dd4a68;
+  --hljs-number: #990055;
+  --hljs-comment: #708090;
+  --hljs-property: #990055;
+  --hljs-variable: #ee9900;
+  --hljs-operator: #9a6e3a;
+  --hljs-punctuation: #999999;
 }
 
 /* ---- Ulysses ---- */
@@ -233,8 +237,8 @@
   --accent: #2BA3A3;
   --accent-fg: #FFFFFF;
   --preview-bg: #F7FBFA;
-  --code-bg: #1F2E2B;
-  --code-text: #E6F0EE;
+  --code-bg: #F6F8FA;
+  --code-text: #24292E;
   --tab-active: #F7FBFA;
   --shadow: 0 1px 3px rgb(31 46 43 / 8%);
   --selection-bg: #D2E4E1;
@@ -267,14 +271,15 @@
   --entity-method: #1E7AA0;
   --entity-aside: #5A7B7A;
   --inline-italic-zh: #5A7B74;
-  --hljs-keyword: #F5A97F;
-  --hljs-string: #B8CCB5;
-  --hljs-title: #EBCB8B;
-  --hljs-number: #D4876A;
-  --hljs-comment: #7A6B5E;
-  --hljs-variable: #D4B8A8;
-  --hljs-operator: #E5C07B;
-  --hljs-punctuation: #C0B0A0;
+  --hljs-keyword: #0077aa;
+  --hljs-string: #669900;
+  --hljs-title: #dd4a68;
+  --hljs-number: #990055;
+  --hljs-comment: #708090;
+  --hljs-property: #990055;
+  --hljs-variable: #ee9900;
+  --hljs-operator: #9a6e3a;
+  --hljs-punctuation: #999999;
 }
 
 /* ---- Material Dark ---- */
@@ -322,12 +327,13 @@
   --entity-method: #82AAFF;
   --entity-aside: #8A8A93;
   --inline-italic-zh: #C792EA;
-  --hljs-keyword: #C792EA;
-  --hljs-string: #C3E88D;
-  --hljs-title: #82AAFF;
-  --hljs-number: #F78C6C;
-  --hljs-comment: #546E7A;
-  --hljs-variable: #F07178;
-  --hljs-operator: #89DDFF;
-  --hljs-punctuation: #B0BEC5;
+  --hljs-keyword: #66d9ef;
+  --hljs-string: #a6e22e;
+  --hljs-title: #e6db74;
+  --hljs-number: #ae81ff;
+  --hljs-comment: #708090;
+  --hljs-property: #f92672;
+  --hljs-variable: #fd971f;
+  --hljs-operator: #e67e65;
+  --hljs-punctuation: #f8f8f2;
 }

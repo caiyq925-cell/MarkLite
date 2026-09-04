@@ -32,8 +32,8 @@
   --accent: #B45F3A;
   --accent-fg: #FFFFFF;
   --preview-bg: #FCF9F6;
-  --code-bg: #2B2622;
-  --code-text: #ECE4DC;
+  --code-bg: #F6F8FA;
+  --code-text: #24292E;
   --tab-active: #FCF9F6;
   --shadow: 0 1px 3px rgb(45 36 30 / 8%);
   --selection-bg: #EADED5;
@@ -68,14 +68,15 @@
   --entity-aside: #5A6B7A;
   --inline-italic-zh: #7A5A3A;
   /* 语法高亮 */
-  --hljs-keyword: #F5A97F;
-  --hljs-string: #B8CCB5;
-  --hljs-title: #EBCB8B;
-  --hljs-number: #D4876A;
-  --hljs-comment: #7A6B5E;
-  --hljs-variable: #D4B8A8;
-  --hljs-operator: #E5C07B;
-  --hljs-punctuation: #C0B0A0;
+  --hljs-keyword: #0077aa;
+  --hljs-string: #669900;
+  --hljs-title: #dd4a68;
+  --hljs-number: #990055;
+  --hljs-comment: #708090;
+  --hljs-property: #990055;
+  --hljs-variable: #ee9900;
+  --hljs-operator: #9a6e3a;
+  --hljs-punctuation: #999999;
 }
 
 /* 首屏兜底：JS 尚未写入 data-theme 且系统为深色（与 Dark 主题同值） */
@@ -125,6 +126,16 @@
     --entity-method: #5AAEE8;
     --entity-aside: #8A9BA8;
     --inline-italic-zh: #C49A6A;
+    /* 语法高亮 (dark) */
+    --hljs-keyword: #66d9ef;
+    --hljs-string: #a6e22e;
+    --hljs-title: #e6db74;
+    --hljs-number: #ae81ff;
+    --hljs-comment: #708090;
+    --hljs-property: #f92672;
+    --hljs-variable: #fd971f;
+    --hljs-operator: #e67e65;
+    --hljs-punctuation: #f8f8f2;
   }
 }
 
@@ -867,9 +878,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .hljs-string, .hljs-attr, .hljs-template-tag, .hljs-template-variable, .hljs-symbol, .hljs-bullet, .hljs-selector-attr, .hljs-selector-pseudo { color: var(--hljs-string); }
 .hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-function .hljs-title { color: var(--hljs-title); }
 .hljs-number, .hljs-built_in, .hljs-builtin-name, .hljs-type, .hljs-params, .hljs-meta-keyword { color: var(--hljs-number); }
-.hljs-comment, .hljs-quote, .hljs-deletion, .hljs-doctag, .hljs-meta, .hljs-regexp { color: var(--hljs-comment); font-style: italic; }
+.hljs-comment, .hljs-quote, .hljs-deletion, .hljs-doctag, .hljs-meta { color: var(--hljs-comment); font-style: italic; }
 .hljs-addition, .hljs-meta-string { color: var(--hljs-string); }
-.hljs-variable, .hljs-property, .hljs-attribute, .hljs-name { color: var(--hljs-variable); }
+.hljs-property, .hljs-attribute, .hljs-name, .hljs-tag { color: var(--hljs-property); }
+.hljs-variable, .hljs-regexp { color: var(--hljs-variable); }
 .hljs-operator { color: var(--hljs-operator); }
 .hljs-punctuation { color: var(--hljs-punctuation); }
 .hljs-emphasis { color: var(--hljs-comment); font-style: italic; }
