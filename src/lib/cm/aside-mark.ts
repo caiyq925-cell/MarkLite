@@ -48,11 +48,13 @@ export function asideMarkPlugin(): Extension {
         class: "cm-aside-fence",
       }));
 
-      // 装饰内部文本
-      builder.add(span.innerFrom, span.innerTo, Decoration.mark({
-        class: span.overlong ? "cm-aside cm-aside-overlong" : "cm-aside",
-        inclusive: false,
-      }));
+      // 装饰内部文本（空旁白 ??…?? 内部为零长度时跳过，避免同位置区间冲突）
+      if (span.innerTo > span.innerFrom) {
+        builder.add(span.innerFrom, span.innerTo, Decoration.mark({
+          class: span.overlong ? "cm-aside cm-aside-overlong" : "cm-aside",
+          inclusive: false,
+        }));
+      }
 
       // 隐藏结束围栏 ??
       builder.add(span.innerTo, span.to, Decoration.replace({

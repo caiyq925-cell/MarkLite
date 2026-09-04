@@ -50,6 +50,27 @@ pub struct AppConfig {
     pub window: Option<WindowGeom>,
     pub split_ratio: f32,
     pub block_remote_images: bool,
+    #[serde(default = "default_entity_intensity")]
+    pub entity_intensity: String,
+    #[serde(default)]
+    pub entity_blacklist: Vec<String>,
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    #[serde(default = "default_follow_system")]
+    pub follow_system: bool,
+    pub accent: Option<String>,
+}
+
+fn default_entity_intensity() -> String {
+    "aggressive".into()
+}
+
+fn default_theme() -> String {
+    "light".into()
+}
+
+fn default_follow_system() -> bool {
+    true
 }
 
 impl Default for AppConfig {
@@ -58,6 +79,11 @@ impl Default for AppConfig {
             window: None,
             split_ratio: 0.5,
             block_remote_images: false,
+            entity_intensity: default_entity_intensity(),
+            entity_blacklist: Vec::new(),
+            theme: default_theme(),
+            follow_system: default_follow_system(),
+            accent: None,
         }
     }
 }

@@ -58,12 +58,31 @@ function isMainlyChinese(text: string): boolean {
 }
 
 /**
+ * 将扫描结果整理为按位置排序且互不交叉的区间。
+ * RangeSetBuilder 要求装饰按 from 升序添加且不允许部分重叠，
+ * 而 findFenceBlocks 是按 加粗→斜体→代码 三个独立扫描合并的，顺序无法保证。
+ * @internal
+ */
+export function sortNonOverlapping(blocks: FenceBlock[]): FenceBlock[] {
+  const sorted = [...blocks].sort((a, b) => a.from - b.from || a.to - b.to);
+  const result: FenceBlock[] = [];
+  let lastEnd = -1;
+  for (const block of sorted) {
+    if (block.from < lastEnd) continue;
+    if (block.to <= block.from) continue;
+    result.push(block);
+    lastEnd = block.to;
+  }
+  return result;
+}
+
+/**
  * CodeMirror 6 插件：为行内围栏添加装饰
  */
 export function inlineFencePlugin(): Extension {
   return EditorView.decorations.compute(["doc"], (state) => {
     const text = state.doc.toString();
-    const blocks = findFenceBlocks(text);
+    const blocks = sortNonOverlapping(findFenceBlocks(text));
     const builder = new RangeSetBuilder<Decoration>();
 
     for (const block of blocks) {

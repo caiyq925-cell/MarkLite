@@ -33,6 +33,9 @@ export interface AppConfig {
   blockRemoteImages: boolean;
   entityIntensity: EntityIntensity;
   entityBlacklist: string[];
+  theme: string;
+  followSystem: boolean;
+  accent: string | null;
 }
 
 export interface DocumentTab {
