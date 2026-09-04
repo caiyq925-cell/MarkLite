@@ -65,14 +65,9 @@ export function isDarkTheme(id: string): boolean {
   return THEMES.find((t) => t.id === id)?.dark ?? false;
 }
 
-/** 解析最终生效的主题 id（跟随系统时在首个 light/dark 主题之间选择） */
+/** 解析最终生效的主题 id（跟随系统时在 light/dark 之间选择） */
 export function effectiveTheme(theme: string, followSystem: boolean, prefersDark: boolean): string {
-  if (followSystem) {
-    const fallback = prefersDark
-      ? THEMES.find((t) => t.dark)?.id
-      : THEMES.find((t) => !t.dark)?.id;
-    return fallback ?? "light";
-  }
+  if (followSystem) return prefersDark ? "dark" : "light";
   return isTheme(theme) ? theme : "light";
 }
 

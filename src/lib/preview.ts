@@ -20,26 +20,120 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { markdownItKatex } from "./math";
 import { slugify } from "./toc";
 
-hljs.registerLanguage("bash", bash);
-hljs.registerLanguage("javascript", javascript);
-hljs.registerLanguage("js", javascript);
-hljs.registerLanguage("typescript", typescript);
-hljs.registerLanguage("ts", typescript);
-hljs.registerLanguage("json", json);
-hljs.registerLanguage("python", python);
-hljs.registerLanguage("go", go);
-hljs.registerLanguage("rust", rust);
-hljs.registerLanguage("xml", xml);
-hljs.registerLanguage("html", xml);
-hljs.registerLanguage("css", css);
-hljs.registerLanguage("yaml", yaml);
-hljs.registerLanguage("sql", sql);
-hljs.registerLanguage("markdown", markdown);
+// ── 语言注册 ──────────────────────────────────────────────────────────────────
+// 静态 import：路径在 ESM 环境下稳定的语言
+const STATIC: Array<[string, unknown]> = [
+  ["bash", bash],
+  ["javascript", javascript],
+  ["js", javascript],
+  ["typescript", typescript],
+  ["ts", typescript],
+  ["json", json],
+  ["python", python],
+  ["go", go],
+  ["rust", rust],
+  ["xml", xml],
+  ["html", xml],
+  ["css", css],
+  ["yaml", yaml],
+  ["sql", sql],
+  ["markdown", markdown],
+];
 
+for (const [id, mod] of STATIC) {
+  const langFn = (mod as { default?: Function }).default ?? mod;
+  if (typeof langFn === "function") hljs.registerLanguage(id, langFn as any);
+}
+
+// 动态注册的语言：Vite 构建时 tree-shake 未使用的语言模块
+const DYNAMIC_LANG_GLOB: Array<{ id: string; alias?: string[] }> = [
+  { id: "c" },
+  { id: "cpp" },
+  { id: "java" },
+  { id: "ruby", alias: ["rb"] },
+  { id: "swift" },
+  { id: "kotlin" },
+  { id: "scala" },
+  { id: "haskell" },
+  { id: "lua" },
+  { id: "perl" },
+  { id: "php" },
+  { id: "r" },
+  { id: "dart" },
+  { id: "elixir", alias: ["ex", "exs"] },
+  { id: "erlang" },
+  { id: "clojure" },
+  { id: "lisp" },
+  { id: "ocaml" },
+  { id: "fsharp" },
+  { id: "nim" },
+  { id: "julia" },
+  { id: "zig" },
+  { id: "jsx" },
+  { id: "tsx" },
+  { id: "svelte" },
+  { id: "vue" },
+  { id: "shell", alias: ["sh"] },
+  { id: "powershell", alias: ["ps1"] },
+  { id: "diff" },
+  { id: "nginx" },
+  { id: "http" },
+  { id: "dockerfile", alias: ["docker"] },
+  { id: "makefile" },
+  { id: "cmake" },
+  { id: "graphql" },
+  { id: "toml" },
+  { id: "ini" },
+  { id: "conf" },
+  { id: "latex", alias: ["tex"] },
+  { id: "scss" },
+  { id: "less" },
+  { id: "csharp", alias: ["cs"] },
+  { id: "objectivec", alias: ["mm"] },
+  { id: "matlab" },
+  { id: "groovy" },
+  { id: "coffeescript", alias: ["coffee"] },
+  { id: "prolog" },
+  { id: "thrift" },
+  { id: "vbscript", alias: ["vb", "vbs"] },
+  { id: "vbnet" },
+  { id: "x86asm" },
+  { id: "arduino" },
+  { id: "armasm" },
+];
+
+async function registerDynamicLanguages() {
+  for (const { id, alias = [] } of DYNAMIC_LANG_GLOB) {
+    const cleanId = id.trim();
+    try {
+      const mod = await import(`highlight.js/lib/languages/${cleanId}`);
+      const langFn = (mod as { default?: Function }).default ?? mod;
+      if (typeof langFn === "function") {
+        hljs.registerLanguage(cleanId, langFn as any);
+        for (const a of alias) hljs.registerLanguage(a, langFn as any);
+      }
+    } catch {
+      // 跳过不可用的语言
+    }
+  }
+}
+registerDynamicLanguages();
+
+// 别名映射（fallback，动态注册已覆盖大部分）
 const ALIASES: Record<string, string> = {
   js: "javascript",
   ts: "typescript",
   html: "xml",
+  rb: "ruby",
+  sh: "bash",
+  cs: "csharp",
+  tex: "latex",
+  docker: "dockerfile",
+  ps1: "powershell",
+  mm: "objectivec",
+  coffee: "coffeescript",
+  vb: "vbscript",
+  vbs: "vbscript",
 };
 
 let mermaidReady: Promise<typeof import("mermaid")> | null = null;
@@ -61,7 +155,7 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: false,
   highlight(code, lang) {
-    const key = ALIASES[lang] ?? lang;
+    const key = (lang && ALIASES[lang]) ?? lang;
     if (key && hljs.getLanguage(key)) {
       return hljs.highlight(code, { language: key, ignoreIllegals: true }).value;
     }

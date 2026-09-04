@@ -96,12 +96,20 @@ for (const file of files) {
 
   const content = readFileSync(join(THEME_DIR, file), "utf-8");
 
-  // Extract Monaco editor variables
+  // Extract Monaco editor variables for syntax highlighting
   const bgColor = extractColorVar(content, "editorBgColor");
   const fgColor = extractColorVar(content, "editorColor");
   const accentRaw = extractVar(content, "themeColor");
   const accentHex = toHex(accentRaw ?? "");
   const codeBg = extractColorVar(content, "codeBlockBgColor");
+  const codeBgRaw = extractVar(content, "codeBlockBgColor");
+
+  // Extract additional Monaco vars for hljs color derivation
+  const highlightColor = extractColorVar(content, "highlightColor");
+  const selectionColor = extractColorVar(content, "selectionColor");
+  const deleteColor = extractColorVar(content, "deleteColor");
+  const buttonPrimaryBg = extractColorVar(content, "buttonPrimaryBgColor");
+  const buttonFontColor = extractColorVar(content, "buttonFontColor");
 
   const dark = isDark(bgColor);
   const fg = fgColor ?? (dark ? "#cdd6f4" : "#2C2A28");
@@ -110,15 +118,74 @@ for (const file of files) {
   const bgVal = bgColor ?? (dark ? "#1e1e2e" : "#FCF9F6");
 
   // Auto-derive muted from fg
-  const muted = dark
-    ? `rgba(${parseInt(fg.slice(1, 3), 16)}, ${parseInt(fg.slice(3, 5), 16)}, ${parseInt(fg.slice(5, 7), 16)}, 0.5)`
-    : `rgba(${parseInt(fg.slice(1, 3), 16)}, ${parseInt(fg.slice(3, 5), 16)}, ${parseInt(fg.slice(5, 7), 16)}, 0.5)`;
+  const fgRgb = fgColor ?? fg;
+  const muted = `rgba(${parseInt(fgRgb.slice(1, 3), 16)}, ${parseInt(fgRgb.slice(3, 5), 16)}, ${parseInt(fgRgb.slice(5, 7), 16)}, 0.5)`;
 
   // Accent foreground (white on dark, dark on light)
   const accentFg = contrastFg(accent);
 
   const borderAlpha = dark ? "rgba(255,255,255,0.1)" : "rgba(44,42,40,0.1)";
   const borderLight = dark ? "rgba(255,255,255,0.06)" : "rgba(44,42,40,0.06)";
+
+  // ── Derive hljs token colors from Monaco theme palette ──────────────────────
+  // Strategy: use the theme's own colors as source of truth.
+  // keyword   → themeColor (accent) — most themes use a distinct blue/cyan
+  // string    → themeColor or highlightColor — green-ish in dark, green in light
+  // title     → buttonPrimaryBgColor or a warm tone
+  // number    → deleteColor or a purple tone
+  // comment   → editorColor at lower opacity → desaturated gray
+  // property  → deleteColor or accent-adjacent
+  // variable  → editorColor (same as fg, slightly tinted)
+  // operator  → editorColor or a neutral
+  // punctuation → editorColor or muted
+  function deriveHljs(): Record<string, string> {
+    const fc = fgColor ?? fg;
+    const ac = accentHex ?? accent;
+
+    // Derive a desaturated muted version of fg for comments
+    const fcRgb = toHex(fc);
+    const commentColor = fcRgb
+      ? desaturate(fcRgb, 0.35)
+      : (dark ? "#708090" : "#708090");
+
+    // Keyword: use themeColor (usually a distinct blue/cyan/green)
+    const keyword = ac;
+
+    // String: use highlightColor if available, else a green variant
+    const strColor = highlightColor ?? (dark ? "#a6e22e" : "#669900");
+
+    // Title: use buttonPrimaryBgColor or a warm gold
+    const title = buttonPrimaryBg ?? (dark ? "#e6db74" : "#dd4a68");
+
+    // Number: use deleteColor or a purple
+    const numColor = deleteColor ?? (dark ? "#ae81ff" : "#990055");
+
+    // Property: accent-adjacent or deleteColor
+    const propColor = deleteColor ?? (dark ? "#f92672" : "#990055");
+
+    // Variable: slightly tinted fg
+    const varColor = fcRgb ? shiftSaturation(fcRgb, 0.8) : fg;
+
+    // Operator: neutral, close to fg but distinct
+    const opColor = fcRgb ? shiftSaturation(fcRgb, 0.5).replace(/^#/, "#") : (dark ? "#e67e65" : "#9a6e3a");
+
+    // Punctuation: close to fg
+    const punctColor = fcRgb ? shiftSaturation(fcRgb, 0.6) : (dark ? "#f8f8f2" : "#999999");
+
+    return {
+      keyword,
+      string: strColor,
+      title,
+      number: numColor,
+      comment: commentColor,
+      property: propColor,
+      variable: varColor,
+      operator: opColor,
+      punctuation: punctColor,
+    };
+  }
+
+  const hljsColors = deriveHljs();
 
   const cssBlock = `
 /* ---- ${name} ---- */
@@ -166,15 +233,15 @@ for (const file of files) {
   --entity-method: ${dark ? "#5AAEE8" : "#1E6FA0"};
   --entity-aside: ${dark ? "rgba(255,255,255,0.4)" : "rgba(44,42,40,0.4)"};
   --inline-italic-zh: ${dark ? "#C49A6A" : "#7A5A3A"};
-  --hljs-keyword: ${dark ? "#66d9ef" : "#0077aa"};
-  --hljs-string: ${dark ? "#a6e22e" : "#669900"};
-  --hljs-title: ${dark ? "#e6db74" : "#dd4a68"};
-  --hljs-number: ${dark ? "#ae81ff" : "#990055"};
-  --hljs-comment: ${dark ? "#708090" : "#708090"};
-  --hljs-property: ${dark ? "#f92672" : "#990055"};
-  --hljs-variable: ${dark ? "#fd971f" : "#ee9900"};
-  --hljs-operator: ${dark ? "#e67e65" : "#9a6e3a"};
-  --hljs-punctuation: ${dark ? "#f8f8f2" : "#999999"};
+  --hljs-keyword: ${hljsColors.keyword};
+  --hljs-string: ${hljsColors.string};
+  --hljs-title: ${hljsColors.title};
+  --hljs-number: ${hljsColors.number};
+  --hljs-comment: ${hljsColors.comment};
+  --hljs-property: ${hljsColors.property};
+  --hljs-variable: ${hljsColors.variable};
+  --hljs-operator: ${hljsColors.operator};
+  --hljs-punctuation: ${hljsColors.punctuation};
   --focus: ${accent};
   --preview-link: ${accent};
 }
@@ -184,6 +251,28 @@ for (const file of files) {
 }
 
 // ---------- colour helpers ----------
+
+/** Desaturate a hex color by factor (0 = gray, 1 = original) */
+function desaturate(hex: string, factor: number): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const gray = r * 0.299 + g * 0.587 + b * 0.114;
+  const nr = Math.round(gray + (r - gray) * factor);
+  const ng = Math.round(gray + (g - gray) * factor);
+  const nb = Math.round(gray + (b - gray) * factor);
+  const clamped = [
+    Math.max(0, Math.min(255, nr)),
+    Math.max(0, Math.min(255, ng)),
+    Math.max(0, Math.min(255, nb)),
+  ];
+  return "#" + clamped.map((c) => c.toString(16).padStart(2, "0")).join("");
+}
+
+
+/** Shift saturation: reduce toward gray */
+function shiftSaturation(hex: string, factor: number): string {
+  return desaturate(hex, factor);
+}
 
 function shiftBrightness(hex: string, amount: number): string {
   const n = parseInt(hex.replace("#", ""), 16);
