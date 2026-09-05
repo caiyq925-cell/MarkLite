@@ -230,6 +230,26 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   align-items: center;
   justify-content: flex-end;
   align-self: stretch;
+  gap: 8px;
+}
+.code-toggle {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.code-toggle:hover {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+}
+.code-toggle.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
 }
 .tb-spacer {
   flex: 1;

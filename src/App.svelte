@@ -763,13 +763,10 @@
     <div class="menu">
       <button type="button">视图</button>
       <div class="menu-panel">
-        <button type="button" disabled={!active} onclick={() => (sourceVisible = !sourceVisible)}>
-          {sourceVisible ? "隐藏源码" : "显示源码"}
-        </button>
-        <button type="button" onclick={() => { blockRemote = !blockRemote; }}>
+        <button type="button" onclick={() => blockRemote = !blockRemote}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
         </button>
-        <button type="button" onclick={() => (entityIntensity = entityIntensity === "aggressive" ? "conservative" : "aggressive")}>
+        <button type="button" onclick={() => entityIntensity = entityIntensity === "aggressive" ? "conservative" : "aggressive"}>
           实体着色: {entityIntensity === "aggressive" ? "激进" : "保守"}
         </button>
       </div>
@@ -806,6 +803,9 @@
     </div>
 
     <div class="tb-right">
+      <button type="button" class="code-toggle" class:active={sourceVisible} onclick={() => sourceVisible = !sourceVisible}>
+        {sourceVisible ? "隐藏代码" : "显示代码"}
+      </button>
       <div class="tb-spacer"></div>
       <div class="win-controls">
         <button type="button" title="最小化" onclick={minimizeWindow}>
