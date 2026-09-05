@@ -541,7 +541,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .preview-host {
   background: var(--preview-bg);
-  padding: 16px 24px 48px;
+  /* 左右各留 10% 空白，内容占中间 80% */
+  padding: 16px 10% 48px;
   font-size: 15px;
   line-height: 1.7;
   color: var(--preview-text);
