@@ -27,6 +27,11 @@ export interface WindowGeom {
 
 export type EntityIntensity = "aggressive" | "conservative";
 
+export interface RecentEntry {
+  path: string;
+  lastOpened: number;
+}
+
 export interface AppConfig {
   window?: WindowGeom | null;
   splitRatio: number;
@@ -36,6 +41,7 @@ export interface AppConfig {
   theme: string;
   followSystem: boolean;
   accent: string | null;
+  recentFiles?: RecentEntry[];
 }
 
 export interface DocumentTab {

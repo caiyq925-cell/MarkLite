@@ -630,6 +630,77 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   color: var(--muted);
 }
 .empty h1 { margin: 0; color: var(--text); font-size: 28px; }
+.recents {
+  width: min(560px, 86%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.recents-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.recents-clear {
+  border: none;
+  background: none;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.recents-clear:hover { color: var(--text); }
+.recents-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elev);
+}
+.recent-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: stretch;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+.recent-item:last-child { border-bottom: none; }
+.recent-item:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.recent-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.recent-name {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-time { flex: none; font-size: 11px; color: var(--muted); }
+.recent-path {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .primary {
   background: var(--accent);
   color: var(--accent-fg);

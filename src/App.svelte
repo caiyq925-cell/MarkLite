@@ -3,7 +3,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import type { AppConfig, DocumentTab, Heading, ReadFileResult } from "./lib/types";
+  import type { AppConfig, DocumentTab, Heading, ReadFileResult, RecentEntry } from "./lib/types";
+  import { pushRecent, timeAgo } from "./lib/recents";
   import { createEditor, type EditorHandle } from "./lib/editor";
   import { extractHeadings } from "./lib/toc";
   import { renderPreview } from "./lib/preview";
@@ -21,6 +22,7 @@
   let theme = $state("light");
   let followSystem = $state(true);
   let accent = $state<string | null>(null);
+  let recents = $state<RecentEntry[]>([]);
   let systemDark = $state(
     typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
@@ -123,6 +125,7 @@
       theme,
       followSystem,
       accent,
+      recentFiles: recents,
     };
     await invoke("set_config", { config: cfg });
   }
@@ -136,9 +139,20 @@
       theme = isTheme(cfg.theme) ? cfg.theme : "light";
       followSystem = cfg.followSystem ?? true;
       accent = cfg.accent ?? null;
+      recents = cfg.recentFiles ?? [];
     } catch {
       /* keep defaults */
     }
+  }
+
+  function rememberRecent(path: string) {
+    recents = pushRecent(recents, path);
+    void persistConfig();
+  }
+
+  function clearRecentList() {
+    recents = [];
+    void persistConfig();
   }
 
   async function openPath(path: string, force = false) {
@@ -173,6 +187,7 @@
       encodingHint =
         result.encoding === "gbk" ? "已按 GBK 打开，保存将写 UTF-8" : result.bom ? "UTF-8 BOM" : "UTF-8";
       await invoke("set_asset_root", { dir: parentDir(result.path) });
+      rememberRecent(result.path);
     } catch (e) {
       const msg = String(e);
       if (msg.includes("文件过大") || msg.toLowerCase().includes("file too large")) {
@@ -235,6 +250,7 @@
       );
       encodingHint = active.bom ? "UTF-8 BOM" : "UTF-8";
       await invoke("set_asset_root", { dir: parentDir(path) });
+      if (saveAs) rememberRecent(path);
     } catch (e) {
       errorText = String(e);
     }
@@ -803,8 +819,8 @@
     </div>
 
     <div class="tb-right">
-      <button type="button" class="code-toggle" class:active={sourceVisible} onclick={() => sourceVisible = !sourceVisible}>
-        {sourceVisible ? "隐藏代码" : "显示代码"}
+      <button type="button" class="code-toggle" class:active={sourceVisible} title={sourceVisible ? "隐藏源码" : "显示源码"} onclick={() => sourceVisible = !sourceVisible}>
+        源码
       </button>
       <div class="tb-spacer"></div>
       <div class="win-controls">
@@ -846,6 +862,25 @@
       <h1>MarkLite</h1>
       <p>打开本地 Markdown 文档，或把文件拖到此窗口。</p>
       <button class="primary" type="button" onclick={() => void chooseOpen()}>打开文件</button>
+      {#if recents.length > 0}
+        <div class="recents">
+          <div class="recents-head">
+            <span>最近打开</span>
+            <button type="button" class="recents-clear" onclick={clearRecentList}>清空记录</button>
+          </div>
+          <div class="recents-list">
+            {#each recents as r (r.path)}
+              <button type="button" class="recent-item" title={r.path} onclick={() => void openPath(r.path)}>
+                <span class="recent-top">
+                  <span class="recent-name">{titleOf(r.path)}</span>
+                  <span class="recent-time">{timeAgo(r.lastOpened)}</span>
+                </span>
+                <span class="recent-path">{r.path}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
   {:else}
       <div class="workspace">

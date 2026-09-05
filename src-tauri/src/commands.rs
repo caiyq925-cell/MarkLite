@@ -46,6 +46,13 @@ pub struct WindowGeom {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct RecentEntry {
+    pub path: String,
+    pub last_opened: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub window: Option<WindowGeom>,
     pub split_ratio: f32,
@@ -59,6 +66,8 @@ pub struct AppConfig {
     #[serde(default = "default_follow_system")]
     pub follow_system: bool,
     pub accent: Option<String>,
+    #[serde(default)]
+    pub recent_files: Vec<RecentEntry>,
 }
 
 fn default_entity_intensity() -> String {
@@ -84,6 +93,7 @@ impl Default for AppConfig {
             theme: default_theme(),
             follow_system: default_follow_system(),
             accent: None,
+            recent_files: Vec::new(),
         }
     }
 }
@@ -328,5 +338,23 @@ mod tests {
         let err = read_file_at(&path, false).unwrap_err();
         assert!(matches!(err, CommandError::FileTooLarge));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn config_without_recents_defaults_to_empty() {
+        let cfg: AppConfig =
+            serde_json::from_str(r#"{"window":null,"splitRatio":0.5,"blockRemoteImages":false}"#)
+                .unwrap();
+        assert!(cfg.recent_files.is_empty());
+    }
+
+    #[test]
+    fn config_recents_round_trip() {
+        let raw = r#"{"window":null,"splitRatio":0.5,"blockRemoteImages":false,"recentFiles":[{"path":"D:\\docs\\a.md","lastOpened":1725500000000}]}"#;
+        let cfg: AppConfig = serde_json::from_str(raw).unwrap();
+        assert_eq!(cfg.recent_files.len(), 1);
+        assert_eq!(cfg.recent_files[0].path, "D:\\docs\\a.md");
+        let out = serde_json::to_string(&cfg).unwrap();
+        assert!(out.contains("recentFiles"));
     }
 }
