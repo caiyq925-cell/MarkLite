@@ -9,6 +9,7 @@
   import { extractHeadings } from "./lib/toc";
   import { renderPreview } from "./lib/preview";
   import { THEMES, ACCENTS, effectiveTheme, isDarkTheme, isTheme, accentForeground } from "./lib/theme";
+  import appIconUrl from "./assets/app-icon.png";
 
   let tabs = $state<DocumentTab[]>([]);
   let activeId = $state<string | null>(null);
@@ -760,7 +761,7 @@
 <div class="shell" role="application">
   <header class="titlebar" data-tauri-drag-region="deep">
     <div class="tb-left">
-      <img class="brand-logo" src="./assets/app-icon.png" alt="" draggable="false" />
+      <img class="brand-logo" src={appIconUrl} alt="" draggable="false" />
       <span class="brand-name">MarkLite</span>
     </div>
 
