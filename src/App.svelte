@@ -45,7 +45,7 @@
   let tocCloseTimer = 0;
   let dragging = false;
   let splitRatio = $state(0.5);
-  let sourceVisible = $state(true);
+  let sourceVisible = $state(false);
   let scrollUnlisten: (() => void) | null = null;
   let previewScrollUnlisten: (() => void) | null = null;
   let syncing = false;
@@ -760,17 +760,7 @@
 <div class="shell" role="application">
   <header class="titlebar" data-tauri-drag-region="deep">
     <div class="tb-left">
-      <svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="var(--accent)" />
-        <path
-          d="M7 16.5v-9l5 5 5-5v9"
-          fill="none"
-          stroke="var(--accent-fg)"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
+      <img class="brand-logo" src="./assets/app-icon.png" alt="" draggable="false" />
       <span class="brand-name">MarkLite</span>
     </div>
 
