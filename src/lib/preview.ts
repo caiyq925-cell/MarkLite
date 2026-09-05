@@ -26,6 +26,9 @@ const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: false,
+  // 段落内单个换行渲染为 <br>（Typora 风格）：日志/清单类文档每行都是一条记录，
+  // 按 CommonMark 默认行为合并成一行会丢失信息
+  breaks: true,
   highlight(code, lang) {
     if (!lang) return md.utils.escapeHtml(code);
     const fullLang = lang.toLowerCase();

@@ -39,6 +39,7 @@
   let editorHost: HTMLDivElement | undefined = $state();
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
+  let previewedId: string | null = null;
   let tocRailEl: HTMLDivElement | undefined = $state();
   let tocPanelEl: HTMLDivElement | undefined = $state();
   let tocCloseTimer = 0;
@@ -638,6 +639,7 @@
     if (!tab) {
       destroyEditor();
       boundId = null;
+      previewedId = null;
       headings = [];
       tocOpen = false;
       previewHtml = "";
@@ -647,6 +649,13 @@
       tab.encoding === "gbk" ? "已按 GBK 打开，保存将写 UTF-8" : tab.bom ? "UTF-8 BOM" : "UTF-8";
     headings = extractHeadings(tab.text);
     void invoke("set_asset_root", { dir: parentDir(tab.path) });
+
+    // 预览不依赖源码面板：关闭源码时 editorHost 不存在，切换标签页仍需刷新预览。
+    // 用 previewedId 去重，避免本 effect 因 tabs 数组更新（每次按键）而重复渲染。
+    if (previewedId !== tab.id) {
+      previewedId = tab.id;
+      void refreshPreview();
+    }
 
     if (!editorHost) return;
     if (boundId === tab.id) {
@@ -669,7 +678,6 @@
     }
     boundId = tab.id;
     updateRailPos();
-    void refreshPreview();
   });
 
   onMount(async () => {

@@ -40,6 +40,15 @@ describe("preview pipeline", () => {
     expect(html).toMatch(/footnote|fn/i);
   });
 
+  it("renders single newlines as <br> (breaks mode)", () => {
+    const html = renderMarkdown("服务名：a\n统计窗口：1小时\n请求量：1W");
+    expect(html).toMatch(/服务名：a<br>\s*统计窗口：1小时<br>\s*请求量：1W/);
+    // 空行仍然分段，不会把两个段落粘成一个
+    const two = renderMarkdown("第一段\n\n第二段");
+    expect(two).toContain("<p>第一段</p>");
+    expect(two).toContain("<p>第二段</p>");
+  });
+
   it("highlights registered languages and leaves unknown as text", () => {
     const js = renderMarkdown("```js\nconst x = 1;\n```");
     expect(js).toContain("token keyword");
