@@ -8,6 +8,7 @@ import {
   hasMermaidFence,
   mermaidEngineLoaded,
   renderMarkdown,
+  renderPreview,
   rewriteImages,
 } from "./preview";
 import { loadLanguage } from "./prism-loader";
@@ -82,4 +83,15 @@ describe("preview pipeline", () => {
     const java = renderMarkdown('```java\nprivate static final String x = "test";\n```');
     expect(java).toContain('token keyword');
     expect(java).toContain('private');
+  });
+
+  it("renderPreview loads fence languages before highlighting", async () => {
+    // 不手动加载 go，直接走 renderPreview 完整管线
+    const html = await renderPreview("```go\nfunc main() {}\n```", {
+      docDir: null,
+      blockRemote: false,
+      dark: false,
+    });
+    expect(html).toContain("token keyword");
+    expect(html).toContain("func");
   });

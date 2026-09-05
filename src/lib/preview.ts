@@ -113,10 +113,29 @@ export function renderMarkdown(source: string): string {
   return DOMPurify.sanitize(raw, PURIFY);
 }
 
+// 提取围栏代码块的语言标识（```java / ~~~python 等，取 info string 首个 token）
+function extractFenceLangs(source: string): string[] {
+  const langs = new Set<string>();
+  for (const m of source.matchAll(/^(?:```|~~~)[ \t]*([^\s`~]+)/gm)) {
+    langs.add(m[1].toLowerCase());
+  }
+  return [...langs];
+}
+
 export async function renderPreview(
   source: string,
   options: { docDir: string | null; blockRemote: boolean; dark: boolean },
 ): Promise<string> {
+  // highlight 回调是同步的：先把文档用到的语言全部加载完，再渲染，
+  // 否则首次渲染时 grammar 未注册会退回纯文本且不会重渲染
+  const fenceLangs = extractFenceLangs(source);
+  if (fenceLangs.length) {
+    try {
+      await loadLanguages(fenceLangs);
+    } catch {
+      /* 个别语言加载失败时按纯文本显示 */
+    }
+  }
   let html = renderMarkdown(source);
   html = rewriteImages(html, options.docDir, options.blockRemote);
   if (hasMermaidFence(source)) {
