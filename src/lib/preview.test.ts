@@ -5,12 +5,12 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 import {
-  containsUnsafeHtml,
   hasMermaidFence,
   mermaidEngineLoaded,
   renderMarkdown,
   rewriteImages,
 } from "./preview";
+import { loadLanguage } from "./prism-loader";
 
 describe("preview pipeline", () => {
   it("renders GFM table tasklist strikethrough and footnote", () => {
@@ -41,10 +41,11 @@ describe("preview pipeline", () => {
 
   it("highlights registered languages and leaves unknown as text", () => {
     const js = renderMarkdown("```js\nconst x = 1;\n```");
-    expect(js).toContain("hljs");
+    expect(js).toContain("token keyword");
+    expect(js).toContain("const");
     const unknown = renderMarkdown("```brainfuck\n+++\n```");
     expect(unknown).toContain("+++");
-    expect(unknown).not.toContain("hljs-");
+    expect(unknown).not.toContain("token keyword");
   });
 
   it("renders katex and keeps source on failure", () => {
@@ -56,7 +57,6 @@ describe("preview pipeline", () => {
 
   it("strips script handlers and javascript urls", () => {
     const html = renderMarkdown(`<script>alert(1)</script>\n\n<a href="javascript:alert(1)">x</a>\n\n<img src="x" onclick="alert(1)">`);
-    expect(containsUnsafeHtml(html)).toBe(false);
     expect(html).not.toMatch(/<script/i);
     expect(html).not.toMatch(/javascript:/i);
     expect(html).not.toMatch(/\sonclick=/i);
@@ -77,9 +77,9 @@ describe("preview pipeline", () => {
   });
 });
 
-  it("highlights Java code with keywords", () => {
+  it("highlights Java code with keywords", async () => {
+    await loadLanguage("java");
     const java = renderMarkdown('```java\nprivate static final String x = "test";\n```');
-    console.log('Java result:', java);
-    expect(java).toContain('hljs-keyword');
+    expect(java).toContain('token keyword');
     expect(java).toContain('private');
   });

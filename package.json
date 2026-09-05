@@ -28,7 +28,8 @@
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-task-lists": "^2.1.1",
-    "mermaid": "^11.9.0"
+    "mermaid": "^11.9.0",
+    "prismjs": "^1.30.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.1.1",

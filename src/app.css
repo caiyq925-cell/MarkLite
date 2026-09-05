@@ -883,18 +883,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   vertical-align: middle;
 }
 
-.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-link, .hljs-section { color: var(--hljs-keyword); }
-.hljs-string, .hljs-attr, .hljs-template-tag, .hljs-template-variable, .hljs-symbol, .hljs-bullet, .hljs-selector-attr, .hljs-selector-pseudo { color: var(--hljs-string); }
-.hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-function .hljs-title { color: var(--hljs-title); }
-.hljs-number, .hljs-built_in, .hljs-builtin-name, .hljs-type, .hljs-params, .hljs-meta-keyword { color: var(--hljs-number); }
-.hljs-comment, .hljs-quote, .hljs-deletion, .hljs-doctag, .hljs-meta { color: var(--hljs-comment); font-style: italic; }
-.hljs-addition, .hljs-meta-string { color: var(--hljs-string); }
-.hljs-property, .hljs-attribute, .hljs-name, .hljs-tag { color: var(--hljs-property); }
-.hljs-variable, .hljs-regexp { color: var(--hljs-variable); }
-.hljs-operator { color: var(--hljs-operator); }
-.hljs-punctuation { color: var(--hljs-punctuation); }
-.hljs-emphasis { color: var(--hljs-comment); font-style: italic; }
-.hljs-strong { font-weight: 600; }
+.token.keyword, .token.selector-tag, .token.literal, .token.link, .token.section { color: var(--hljs-keyword); }
+.token.string, .token.attr, .token.template-tag, .token.template-variable, .token.symbol, .token.bullet, .token.selector-attr, .token.selector-pseudo { color: var(--hljs-string); }
+.token.title, .token.title.function_, .token.title.class_, .token.function .token.title { color: var(--hljs-title); }
+.token.number, .token.built_in, .token.builtin-name, .token.type, .token.params, .token.meta-keyword { color: var(--hljs-number); }
+.token.comment, .token.quote, .token.deletion, .token.doctag, .token.meta { color: var(--hljs-comment); font-style: italic; }
+.token.addition, .token.meta-string { color: var(--hljs-string); }
+.token.property, .token.attribute, .token.name, .token.tag { color: var(--hljs-property); }
+.token.variable, .token.regexp { color: var(--hljs-variable); }
+.token.operator { color: var(--hljs-operator); }
+.token.punctuation { color: var(--hljs-punctuation); }
+.token.emphasis { color: var(--hljs-comment); font-style: italic; }
+.token.strong { font-weight: 600; }
 
 @keyframes fade-in {
   from { opacity: 0; }

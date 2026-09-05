@@ -3,141 +3,60 @@ import anchor from "markdown-it-anchor";
 import footnote from "markdown-it-footnote";
 import taskLists from "markdown-it-task-lists";
 import DOMPurify from "dompurify";
-import hljs from "highlight.js/lib/core";
-import bash from "highlight.js/lib/languages/bash";
-import javascript from "highlight.js/lib/languages/javascript";
-import typescript from "highlight.js/lib/languages/typescript";
-import json from "highlight.js/lib/languages/json";
-import python from "highlight.js/lib/languages/python";
-import go from "highlight.js/lib/languages/go";
-import rust from "highlight.js/lib/languages/rust";
-import java from "highlight.js/lib/languages/java";
-import xml from "highlight.js/lib/languages/xml";
-import css from "highlight.js/lib/languages/css";
-import yaml from "highlight.js/lib/languages/yaml";
-import sql from "highlight.js/lib/languages/sql";
-import markdown from "highlight.js/lib/languages/markdown";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { markdownItKatex } from "./math";
 import { slugify } from "./toc";
+import { Prism, loadLanguages, loadLanguage, applyPrismPatches } from "./prism-loader";
 
-// ── 语言注册 ──────────────────────────────────────────────────────────────────
-// 静态 import：路径在 ESM 环境下稳定的语言
-const STATIC: Array<[string, unknown]> = [
-  ["bash", bash],
-  ["javascript", javascript],
-  ["js", javascript],
-  ["typescript", typescript],
-  ["ts", typescript],
-  ["json", json],
-  ["python", python],
-  ["go", go],
-  ["rust", rust],
-  ["java", java],
-  ["xml", xml],
-  ["html", xml],
-  ["css", css],
-  ["yaml", yaml],
-  ["sql", sql],
-  ["markdown", markdown],
+// ── 初始化 Prism 补丁 ──────────────────────────────────────────────────
+applyPrismPatches();
+
+// ── 预加载常用语言 ─────────────────────────────────────────────────────
+// markdown-it 的 highlight 回调是同步的，异步加载的语言第一次渲染时
+// 拿不到 grammar 会退回纯文本，因此启动时先把高频语言注册进 Prism。
+const COMMON_LANGS = [
+  "typescript", "tsx", "jsx", "java", "python", "c", "cpp", "csharp",
+  "go", "rust", "ruby", "php", "swift", "kotlin", "scala", "sql",
+  "bash", "json", "yaml", "toml", "markdown", "diff",
 ];
+void loadLanguages(COMMON_LANGS);
 
-for (const [id, mod] of STATIC) {
-  const langFn = (mod as { default?: Function }).default ?? mod;
-  if (typeof langFn === "function") hljs.registerLanguage(id, langFn as any);
-}
-
-// 动态注册的语言：Vite 构建时 tree-shake 未使用的语言模块
-const DYNAMIC_LANG_GLOB: Array<{ id: string; alias?: string[] }> = [
-  { id: "c" },
-  { id: "cpp" },
-  { id: "java" },
-  { id: "ruby", alias: ["rb"] },
-  { id: "swift" },
-  { id: "kotlin" },
-  { id: "scala" },
-  { id: "haskell" },
-  { id: "lua" },
-  { id: "perl" },
-  { id: "php" },
-  { id: "r" },
-  { id: "dart" },
-  { id: "elixir", alias: ["ex", "exs"] },
-  { id: "erlang" },
-  { id: "clojure" },
-  { id: "lisp" },
-  { id: "ocaml" },
-  { id: "fsharp" },
-  { id: "nim" },
-  { id: "julia" },
-  { id: "zig" },
-  { id: "jsx" },
-  { id: "tsx" },
-  { id: "svelte" },
-  { id: "vue" },
-  { id: "shell", alias: ["sh"] },
-  { id: "powershell", alias: ["ps1"] },
-  { id: "diff" },
-  { id: "nginx" },
-  { id: "http" },
-  { id: "dockerfile", alias: ["docker"] },
-  { id: "makefile" },
-  { id: "cmake" },
-  { id: "graphql" },
-  { id: "toml" },
-  { id: "ini" },
-  { id: "conf" },
-  { id: "latex", alias: ["tex"] },
-  { id: "scss" },
-  { id: "less" },
-  { id: "csharp", alias: ["cs"] },
-  { id: "objectivec", alias: ["mm"] },
-  { id: "matlab" },
-  { id: "groovy" },
-  { id: "coffeescript", alias: ["coffee"] },
-  { id: "prolog" },
-  { id: "thrift" },
-  { id: "vbscript", alias: ["vb", "vbs"] },
-  { id: "vbnet" },
-  { id: "x86asm" },
-  { id: "arduino" },
-  { id: "armasm" },
-];
-
-async function registerDynamicLanguages() {
-  for (const { id, alias = [] } of DYNAMIC_LANG_GLOB) {
-    const cleanId = id.trim();
-    try {
-      const mod = await import(`highlight.js/lib/languages/${cleanId}`);
-      const langFn = (mod as { default?: Function }).default ?? mod;
-      if (typeof langFn === "function") {
-        hljs.registerLanguage(cleanId, langFn as any);
-        for (const a of alias) hljs.registerLanguage(a, langFn as any);
-      }
-    } catch {
-      // 跳过不可用的语言
+// ── Markdown 高亮配置 ──────────────────────────────────────────────────
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: false,
+  highlight(code, lang) {
+    if (!lang) return md.utils.escapeHtml(code);
+    const fullLang = lang.toLowerCase();
+    const grammar = Prism.languages[fullLang];
+    if (!grammar) {
+      // 尝试加载语言（同步模式下返回纯文本，异步加载后会重新渲染）
+      loadLanguage(fullLang);
+      return md.utils.escapeHtml(code);
     }
-  }
-}
-registerDynamicLanguages();
+    return Prism.highlight(code, grammar, fullLang);
+  },
+});
 
-// 别名映射（fallback，动态注册已覆盖大部分）
-const ALIASES: Record<string, string> = {
-  js: "javascript",
-  ts: "typescript",
-  html: "xml",
-  rb: "ruby",
-  sh: "bash",
-  cs: "csharp",
-  tex: "latex",
-  docker: "dockerfile",
-  ps1: "powershell",
-  mm: "objectivec",
-  coffee: "coffeescript",
-  vb: "vbscript",
-  vbs: "vbscript",
+md.enable("strikethrough");
+md.use(anchor, {
+  slugify,
+  permalink: false,
+});
+md.use(footnote);
+md.use(taskLists, { enabled: true, label: true });
+md.use(markdownItKatex);
+
+// ── DOMPurify 配置 ──────────────────────────────────────────────────────
+const PURIFY: DOMPurify.Config = {
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|data|asset):|http:\/\/asset\.localhost|#)/i,
+  FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
+  ALLOWED_ATTR: ["class", "id", "style", "open"],
+  ADD_ATTR: ["target", "rel", "class", "id", "open", "style"],
 };
 
+// ── Mermaid 引擎 ────────────────────────────────────────────────────────
 let mermaidReady: Promise<typeof import("mermaid")> | null = null;
 let mermaidBooted = false;
 
@@ -152,35 +71,7 @@ function loadMermaid() {
   return mermaidReady;
 }
 
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: false,
-  highlight(code, lang) {
-    const key = (lang && ALIASES[lang]) ?? lang;
-    if (key && hljs.getLanguage(key)) {
-      return hljs.highlight(code, { language: key, ignoreIllegals: true }).value;
-    }
-    return md.utils.escapeHtml(code);
-  },
-});
-
-md.enable("strikethrough");
-md.use(anchor, {
-  slugify,
-  permalink: false,
-});
-md.use(footnote);
-md.use(taskLists, { enabled: true, label: true });
-md.use(markdownItKatex);
-
-const PURIFY: DOMPurify.Config = {
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|data|asset):|http:\/\/asset\.localhost|#)/i,
-  FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
-  ALLOWED_ATTR: ["class", "id", "style", "open"],
-  ADD_ATTR: ["target", "rel", "class", "id", "open", "style"],
-};
-
+// ── 导出 ──────────────────────────────────────────────────────────────────
 export function hasMermaidFence(source: string): boolean {
   return /```[ \t]*mermaid\b/i.test(source);
 }
@@ -232,7 +123,6 @@ export async function renderPreview(
     try {
       html = await renderMermaidBlocks(html, options.dark);
     } catch (err) {
-      // 图表渲染失败不应吞掉整个预览，保留已渲染的 Markdown 并给出提示
       const msg = err instanceof Error ? err.message : String(err);
       html = `<pre class="mermaid-error">图表渲染失败：${md.utils.escapeHtml(msg)}</pre>${html}`;
     }
@@ -242,56 +132,26 @@ export async function renderPreview(
 
 async function renderMermaidBlocks(html: string, dark: boolean): Promise<string> {
   const mermaidMod = await loadMermaid();
-  mermaidBooted = true;
-  mermaidMod.default.initialize({
-    startOnLoad: false,
-    securityLevel: "strict",
-    theme: dark ? "dark" : "default",
-  });
-  const container = document.createElement("div");
-  container.innerHTML = html;
-  const blocks = [...container.querySelectorAll("pre code.language-mermaid, code.language-mermaid")];
-  await Promise.all(
-    blocks.map(async (el, index) => {
-      const src = el.textContent ?? "";
-      const host = el.closest("pre") ?? el;
-      try {
-        const id = `mermaid-${index}-${Date.now()}`;
-        const result = await Promise.race([
-          mermaidMod.default.render(id, src),
-          timeout(3000),
-        ]);
-        if (!result) {
-          host.replaceWith(errorNode(src, "图表渲染超时（超过 3 秒）"));
-          return;
-        }
-        const wrap = document.createElement("div");
-        wrap.className = "mermaid-svg";
-        if (/^\s*sequenceDiagram/i.test(src)) {
-          wrap.dataset.type = "sequence";
-        }
-        wrap.innerHTML = result.svg;
-        host.replaceWith(wrap);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        host.replaceWith(errorNode(src, msg));
-      }
-    }),
-  );
-  return container.innerHTML;
-}
+  const blocks = [...html.matchAll(/<pre class="mermaid">([\s\S]*?)<\/pre>/gi)];
+  if (blocks.length === 0) return html;
 
-function timeout(ms: number): Promise<null> {
-  return new Promise((resolve) => setTimeout(() => resolve(null), ms));
-}
+  const results: string[] = [];
+  for (const [, code] of blocks) {
+    const decoded = code
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    try {
+      const result = await mermaidMod.render("mermaid", decoded, dark);
+      results.push(`<div class="mermaid-svg">${result.svg}</div>`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push(`<pre class="mermaid-error">图表渲染失败：${md.utils.escapeHtml(msg)}</pre>`);
+    }
+  }
 
-function errorNode(src: string, message: string): HTMLElement {
-  const pre = document.createElement("pre");
-  pre.className = "mermaid-error";
-  pre.textContent = `${src}\n${message}`;
-  return pre;
-}
-
-export function containsUnsafeHtml(html: string): boolean {
-  return /<script\b/i.test(html) || /\son\w+=/i.test(html) || /javascript:/i.test(html);
+  let idx = 0;
+  return html.replace(/<pre class="mermaid">[\s\S]*?<\/pre>/g, () => results[idx++] ?? "");
 }
