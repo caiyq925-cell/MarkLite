@@ -129,15 +129,15 @@ for (const file of files) {
 
   // ── Derive hljs token colors from Monaco theme palette ──────────────────────
   // Strategy: use the theme's own colors as source of truth.
-  // keyword   → themeColor (accent) — most themes use a distinct blue/cyan
-  // string    → themeColor or highlightColor — green-ish in dark, green in light
-  // title     → buttonPrimaryBgColor or a warm tone
-  // number    → deleteColor or a purple tone
-  // comment   → editorColor at lower opacity → desaturated gray
-  // property  → deleteColor or accent-adjacent
-  // variable  → editorColor (same as fg, slightly tinted)
-  // operator  → editorColor or a neutral
-  // punctuation → editorColor or muted
+  // keyword   → themeColor (accent)
+  // string    → a green tint derived from themeColor (Monaco has no dedicated string var)
+  // title     → buttonPrimaryBgColor or a warm gold/orange
+  // number    → deleteColor (red/pink in most themes)
+  // comment   → desaturated editorColor
+  // property  → deleteColor or a magenta variant
+  // variable  → editorColor slightly desaturated
+  // operator  → neutral gray near editorColor
+  // punctuation → neutral near editorColor
   function deriveHljs(): Record<string, string> {
     const fc = fgColor ?? fg;
     const ac = accentHex ?? accent;
@@ -148,29 +148,29 @@ for (const file of files) {
       ? desaturate(fcRgb, 0.35)
       : (dark ? "#708090" : "#708090");
 
-    // Keyword: use themeColor (usually a distinct blue/cyan/green)
+    // Keyword: themeColor
     const keyword = ac;
 
-    // String: use highlightColor if available, else a green variant
-    const strColor = highlightColor ?? (dark ? "#a6e22e" : "#669900");
+    // String: shift hue of themeColor toward green (Monaco doesn't expose a string color)
+    const strColor = ac ? shiftHue(ac, dark ? 80 : 90) : (dark ? "#a6e22e" : "#669900");
 
-    // Title: use buttonPrimaryBgColor or a warm gold
-    const title = buttonPrimaryBg ?? (dark ? "#e6db74" : "#dd4a68");
+    // Title: warm gold/orange — shift themeColor hue toward orange if blue-ish
+    const title = buttonPrimaryBg ?? (ac ? shiftHue(ac, 30) : (dark ? "#e6db74" : "#dd4a68"));
 
-    // Number: use deleteColor or a purple
+    // Number: deleteColor (red/pink) — most themes use this for errors/deletions
     const numColor = deleteColor ?? (dark ? "#ae81ff" : "#990055");
 
-    // Property: accent-adjacent or deleteColor
+    // Property: magenta variant — shift deleteColor slightly toward pink
     const propColor = deleteColor ?? (dark ? "#f92672" : "#990055");
 
-    // Variable: slightly tinted fg
-    const varColor = fcRgb ? shiftSaturation(fcRgb, 0.8) : fg;
+    // Variable: slightly desaturated fg
+    const varColor = fcRgb ? desaturate(fcRgb, 0.85) : fg;
 
-    // Operator: neutral, close to fg but distinct
-    const opColor = fcRgb ? shiftSaturation(fcRgb, 0.5).replace(/^#/, "#") : (dark ? "#e67e65" : "#9a6e3a");
+    // Operator: near-fg neutral
+    const opColor = fcRgb ? desaturate(fcRgb, 0.6) : (dark ? "#e67e65" : "#9a6e3a");
 
-    // Punctuation: close to fg
-    const punctColor = fcRgb ? shiftSaturation(fcRgb, 0.6) : (dark ? "#f8f8f2" : "#999999");
+    // Punctuation: near-fg neutral
+    const punctColor = fcRgb ? desaturate(fcRgb, 0.7) : (dark ? "#f8f8f2" : "#999999");
 
     return {
       keyword,
@@ -251,6 +251,43 @@ for (const file of files) {
 }
 
 // ---------- colour helpers ----------
+
+/** Shift hue by degrees (0-360) on an HSL wheel */
+function shiftHue(hex: string, degrees: number): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  let r = ((n >> 16) & 255) / 255;
+  let g = ((n >> 8) & 255) / 255;
+  let b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  h = (h + degrees / 360) % 1;
+  if (h < 0) h += 1;
+  let rr = r, gg = g, bb = b;
+  if (s > 0) {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    rr = hue2rgb(p, q, h + 1/3);
+    gg = hue2rgb(p, q, h);
+    bb = hue2rgb(p, q, h - 1/3);
+  }
+  const ri = Math.round(rr * 255), gi = Math.round(gg * 255), bi = Math.round(bb * 255);
+  return "#" + [ri, gi, bi].map((c) => c.toString(16).padStart(2, "0")).join("");
+}
 
 /** Desaturate a hex color by factor (0 = gray, 1 = original) */
 function desaturate(hex: string, factor: number): string {

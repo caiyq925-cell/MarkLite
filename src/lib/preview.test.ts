@@ -76,3 +76,10 @@ describe("preview pipeline", () => {
     expect(escape).toContain("越界");
   });
 });
+
+  it("highlights Java code with keywords", () => {
+    const java = renderMarkdown('```java\nprivate static final String x = "test";\n```');
+    console.log('Java result:', java);
+    expect(java).toContain('hljs-keyword');
+    expect(java).toContain('private');
+  });

@@ -11,6 +11,7 @@ import json from "highlight.js/lib/languages/json";
 import python from "highlight.js/lib/languages/python";
 import go from "highlight.js/lib/languages/go";
 import rust from "highlight.js/lib/languages/rust";
+import java from "highlight.js/lib/languages/java";
 import xml from "highlight.js/lib/languages/xml";
 import css from "highlight.js/lib/languages/css";
 import yaml from "highlight.js/lib/languages/yaml";
@@ -32,6 +33,7 @@ const STATIC: Array<[string, unknown]> = [
   ["python", python],
   ["go", go],
   ["rust", rust],
+  ["java", java],
   ["xml", xml],
   ["html", xml],
   ["css", css],
@@ -175,6 +177,7 @@ md.use(markdownItKatex);
 const PURIFY: DOMPurify.Config = {
   ALLOWED_URI_REGEXP: /^(?:(?:https?|data|asset):|http:\/\/asset\.localhost|#)/i,
   FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
+  ALLOWED_ATTR: ["class", "id", "style", "open"],
   ADD_ATTR: ["target", "rel", "class", "id", "open", "style"],
 };
 
