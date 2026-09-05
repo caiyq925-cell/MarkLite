@@ -1,9 +1,42 @@
 import Prism from 'prismjs'
 import { languages } from 'prismjs/components.js'
 
-// ── 预加载的基础语言（Prism 核心）──────────────────────────────────────────
+// ── 常用语言静态注册 ──────────────────────────────────────────────────────
+// 动态模板字符串 import() 对 CJS 依赖在 Vite 生产构建下不会打包语言文件
+// （产物里缺失语法定义），因此高频语言必须静态导入；声明顺序需满足依赖：
+// c 在 cpp 前，typescript 在 tsx 前，java 在 scala 前，markup-templating 在 php 前。
+import 'prismjs/components/prism-c'
+import 'prismjs/components/prism-cpp'
+import 'prismjs/components/prism-typescript'
+import 'prismjs/components/prism-jsx'
+import 'prismjs/components/prism-tsx'
+import 'prismjs/components/prism-java'
+import 'prismjs/components/prism-scala'
+import 'prismjs/components/prism-markup-templating'
+import 'prismjs/components/prism-php'
+import 'prismjs/components/prism-python'
+import 'prismjs/components/prism-csharp'
+import 'prismjs/components/prism-go'
+import 'prismjs/components/prism-rust'
+import 'prismjs/components/prism-ruby'
+import 'prismjs/components/prism-swift'
+import 'prismjs/components/prism-kotlin'
+import 'prismjs/components/prism-sql'
+import 'prismjs/components/prism-bash'
+import 'prismjs/components/prism-json'
+import 'prismjs/components/prism-yaml'
+import 'prismjs/components/prism-toml'
+import 'prismjs/components/prism-markdown'
+import 'prismjs/components/prism-diff'
+
 // markup / css / clike / javascript 由 prismjs 核心自动注册
-export const loadedLanguages = new Set(['markup', 'css', 'clike', 'javascript'])
+export const loadedLanguages = new Set([
+  'markup', 'css', 'clike', 'javascript',
+  'c', 'cpp', 'typescript', 'jsx', 'tsx', 'java', 'scala',
+  'markup-templating', 'php', 'python', 'csharp', 'go', 'rust',
+  'ruby', 'swift', 'kotlin', 'sql', 'bash', 'json', 'yaml',
+  'toml', 'markdown', 'diff',
+])
 
 // ── 别名归一化 ──────────────────────────────────────────────────────────
 // 将短别名（js、ts、py、sh 等）转为 Prism 官方语言 ID
