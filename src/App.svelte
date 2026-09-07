@@ -4,10 +4,12 @@
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import type { AppConfig, DocumentTab, Heading, ReadFileResult, RecentEntry } from "./lib/types";
+  import type { AsideSpan } from "./lib/cm/types";
   import { pushRecent, timeAgo } from "./lib/recents";
   import { createEditor, type EditorHandle } from "./lib/editor";
   import { extractHeadings } from "./lib/toc";
   import { renderPreview } from "./lib/preview";
+  import { scanAsides } from "./lib/cm/aside-mark";
   import { THEMES, ACCENTS, effectiveTheme, isDarkTheme, isTheme, accentForeground } from "./lib/theme";
   import appIconUrl from "./assets/app-icon.png";
 
@@ -28,6 +30,8 @@
     typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
   let errorText = $state<string | null>(null);
+  let asidePanelOpen = $state(false);
+  let asideEditId = $state<string | null>(null);
   let prompt = $state<null | {
     title: string;
     body: string;
@@ -71,6 +75,7 @@
   const active = $derived(tabs.find((t) => t.id === activeId) ?? null);
   const resolvedTheme = $derived(effectiveTheme(theme, followSystem, systemDark));
   const dark = $derived(isDarkTheme(resolvedTheme));
+  const activeAsides = $derived(active ? scanAsides(active.text) : []);
 
   // 应用主题与强调色到 <html>
   $effect(() => {
@@ -449,6 +454,63 @@
 
   const TOC_PANEL_WIDTH = 260;
 
+  // ── 旁注面板 ─────────────────────────────────────────────────────────
+  let asidePanelX = $state(0);
+  let asidePanelY = $state(0);
+
+  function openAsidePanel(span: AsideSpan, x: number, y: number) {
+    asideEditId = `${span.from}-${span.to}`;
+    asidePanelX = x;
+    asidePanelY = y;
+    asidePanelOpen = true;
+  }
+
+  function closeAsidePanel() {
+    asidePanelOpen = false;
+    asideEditId = null;
+  }
+
+  function updateAsideContent(newContent: string) {
+    if (!active || asideEditId === null) return;
+    const [fromStr, toStr] = asideEditId.split("-");
+    const from = parseInt(fromStr, 10);
+    const to = parseInt(toStr, 10);
+    const text = active.text;
+    const before = text.slice(0, from);
+    const after = text.slice(to);
+    const updated = `${before}??${newContent}??${after}`;
+    tabs = tabs.map((t) =>
+      t.id === active.id ? { ...t, text: updated, dirty: updated !== t.lastSavedText } : t,
+    );
+  }
+
+  function deleteAside() {
+    if (!active || asideEditId === null) return;
+    const [fromStr, toStr] = asideEditId.split("-");
+    const from = parseInt(fromStr, 10);
+    const to = parseInt(toStr, 10);
+    const text = active.text;
+    const before = text.slice(0, from);
+    const after = text.slice(to);
+    const updated = `${before}${after}`;
+    tabs = tabs.map((t) =>
+      t.id === active.id ? { ...t, text: updated, dirty: updated !== t.lastSavedText } : t,
+    );
+    closeAsidePanel();
+  }
+
+  // 编辑器点击：检测 aside 并弹出面板
+  function onEditorClick(e: MouseEvent) {
+    if (!editor || !active) return;
+    const pos = editor.view.posAtCoords({ x: e.clientX, y: e.clientY });
+    if (pos === null) return;
+    const spans = scanAsides(active.text);
+    const span = spans.find((s) => pos >= s.from && pos <= s.to);
+    if (!span) return;
+    const rect = editor.view.dom.getBoundingClientRect();
+    openAsidePanel(span, rect.right + 8, e.clientY);
+  }
+
   // 分栏拖拽
   function onSplitMouseDown(e: MouseEvent) {
     dragging = true;
@@ -778,6 +840,9 @@
     <div class="menu">
       <button type="button">视图</button>
       <div class="menu-panel">
+        <button type="button" onclick={() => asidePanelOpen = !asidePanelOpen">
+          旁注面板 {asidePanelOpen ? "✓" : ""}
+        </button>
         <button type="button" onclick={() => blockRemote = !blockRemote}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
         </button>
@@ -887,9 +952,25 @@
         {#if sourceVisible}
         <div id="pane-editor" class="pane pane-editor">
           <div class="pane-label"><span class="pane-label-text">源码</span></div>
-          <div class="editor-host" bind:this={editorHost}></div>
+          <div class="editor-host" bind:this={editorHost} onclick={onEditorClick}></div>
         </div>
         <div class="split" onmousedown={onSplitMouseDown}></div>
+        {/if}
+        {#if asidePanelOpen && activeAsides.length > 0}
+        <div class="pane pane-aside" style="width: 240px">
+          <div class="pane-label">
+            <span class="pane-label-text">旁注</span>
+            <button type="button" class="aside-close" onclick={closeAsidePanel}>×</button>
+          </div>
+          <div class="aside-list">
+            {#each activeAsides as a (a.from + "-" + a.to)}
+              <div class="aside-item" onclick={() => openAsidePanel(a, 0, 0)}>
+                <div class="aside-line">第 {editor?.view.state.doc.lineAt(a.from).number ?? 1} 行</div>
+                <div class="aside-preview">{a.content.slice(0, 60)}{a.content.length > 60 ? "…" : ""}</div>
+              </div>
+            {/each}
+          </div>
+        </div>
         {/if}
         <div id="pane-preview" class="pane pane-preview">
           <div class="pane-label"><span class="pane-label-text">预览</span></div>
@@ -977,7 +1058,7 @@
   </div>
 {/if}
 
-{#if errorText}
+  {#if errorText}
   <div class="dialog-backdrop">
     <div class="dialog" role="alertdialog">
       <h2>提示</h2>
@@ -987,4 +1068,25 @@
       </div>
     </div>
   </div>
-{/if}
+  {/if}
+
+  {#if asidePanelOpen && asideEditId && active}
+    {@const currentAside = activeAsides.find(a => `${a.from}-${a.to}` === asideEditId)}
+    {#if currentAside}
+    <div class="aside-editor-popup" style="left:{asidePanelX}px; top:{asidePanelY}px">
+      <div class="aside-editor-header">
+        <span>第 {editor?.view.state.doc.lineAt(currentAside.from).number ?? 1} 行</span>
+        <button type="button" class="aside-close" onclick={closeAsidePanel}>×</button>
+      </div>
+      <textarea
+        class="aside-editor-textarea"
+        value={currentAside.content}
+        oninput={(e) => updateAsideContent((e.target as HTMLTextAreaElement).value)}
+      ></textarea>
+      <div class="aside-editor-actions">
+        <button type="button" class="danger" onclick={deleteAside}>删除</button>
+        <button type="button" class="primary" onclick={closeAsidePanel}>完成</button>
+      </div>
+    </div>
+    {/if}
+  {/if}

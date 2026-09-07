@@ -154,7 +154,8 @@ export async function renderPreview(
 
 async function renderMermaidBlocks(html: string, dark: boolean): Promise<string> {
   const mermaidMod = await loadMermaid();
-  const blocks = [...html.matchAll(/<pre class="mermaid">([\s\S]*?)<\/pre>/gi)];
+  // markdown-it 默认把 ```mermaid 渲染为 <pre><code class="language-mermaid">
+  const blocks = [...html.matchAll(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/gi)];
   if (blocks.length === 0) return html;
 
   const results: string[] = [];
@@ -175,5 +176,5 @@ async function renderMermaidBlocks(html: string, dark: boolean): Promise<string>
   }
 
   let idx = 0;
-  return html.replace(/<pre class="mermaid">[\s\S]*?<\/pre>/g, () => results[idx++] ?? "");
+  return html.replace(/<pre><code class="language-mermaid">[\s\S]*?<\/code><\/pre>/g, () => results[idx++] ?? "");
 }
