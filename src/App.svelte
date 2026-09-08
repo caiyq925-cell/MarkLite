@@ -609,13 +609,17 @@
   // 点击预览区：捕获图表放大按钮
   function onPreviewPointerDown(e: PointerEvent) {
     const target = e.target as HTMLElement;
-    const btn = target.closest(".mermaid-magnifier") as HTMLElement | null;
+    const btn = target.closest(".mermaid-magnifier");
     if (!btn) return;
-    const container = btn.parentElement;
+    // 用 closest 找最近的 .mermaid-svg 容器（比 parentElement 更稳健）
+    const container = (btn as HTMLElement).closest(".mermaid-svg") as HTMLElement | null;
     if (!container) return;
-    const svg = container.querySelector("svg")?.outerHTML;
-    if (!svg) return;
+    // :scope > svg 只选直接子级，避免匹配放大按钮自身的图标 <svg>
+    const svgEl = container.querySelector(":scope > svg");
+    const svg = svgEl?.outerHTML;
+    if (!svg || svg.length < 20) return;
     e.preventDefault();
+    e.stopPropagation();
     openZoom(svg, "图表");
   }
 
