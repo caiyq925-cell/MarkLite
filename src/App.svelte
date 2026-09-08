@@ -61,6 +61,7 @@
   let unlistenClose: UnlistenFn | undefined;
   let unlistenResized: UnlistenFn | undefined;
   let unlistenSystemTheme: (() => void) | null = null;
+  let unlistenFileChanged: UnlistenFn | undefined;
   let maximized = $state(false);
 
   function destroyEditor() {
@@ -152,9 +153,32 @@
     }
   }
 
-  function rememberRecent(path: string) {
-    recents = pushRecent(recents, path);
-    void persistConfig();
+  function watchActiveFile(path: string) {
+    if (!path) return;
+    void invoke("watch_file", { path }).catch(() => {});
+  }
+
+  // 外部文件修改监听：文件变化时弹提示，用户确认后重新加载
+  function onFileChanged(ev: { payload: string }) {
+    const changedPath = ev.payload;
+    if (!active || active.path !== changedPath) return;
+    // 用户正在编辑时不打扰（避免覆盖未保存内容）
+    if (active.dirty) return;
+    prompt = {
+      title: "文件已更新",
+      body: `${titleOf(changedPath)} 已被外部修改，是否重新加载？`,
+      actions: [
+        {
+          label: "重新加载",
+          kind: "primary",
+          run: async () => {
+            prompt = null;
+            await openPath(changedPath, false);
+          },
+        },
+        { label: "忽略", run: () => { prompt = null; } },
+      ],
+    };
   }
 
   function clearRecentList() {
@@ -195,6 +219,7 @@
         result.encoding === "gbk" ? "已按 GBK 打开，保存将写 UTF-8" : result.bom ? "UTF-8 BOM" : "UTF-8";
       await invoke("set_asset_root", { dir: parentDir(result.path) });
       rememberRecent(result.path);
+      watchActiveFile(result.path);
     } catch (e) {
       const msg = String(e);
       if (msg.includes("文件过大") || msg.toLowerCase().includes("file too large")) {
@@ -768,6 +793,7 @@
     unlistenOpen = await listen<string[]>("open-files", async (ev) => {
       for (const p of ev.payload ?? []) await openPath(p);
     });
+    unlistenFileChanged = await listen<string>("file-changed", onFileChanged);
     const win = getCurrentWindow();
     try {
       maximized = await win.isMaximized();
@@ -812,6 +838,7 @@
     window.removeEventListener("mouseup", onSplitMouseUp);
     window.clearTimeout(tocCloseTimer);
     unlistenOpen?.();
+    unlistenFileChanged?.();
     unlistenClose?.();
     unlistenResized?.();
     unlistenDrag?.();
