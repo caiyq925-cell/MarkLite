@@ -840,8 +840,8 @@
     <div class="menu">
       <button type="button">视图</button>
       <div class="menu-panel">
-        <button type="button" onclick={() => asidePanelOpen = !asidePanelOpen">
-          旁注面板 {asidePanelOpen ? "✓" : ""}
+        <button type="button" onclick="{() => asidePanelOpen = !asidePanelOpen}">
+          旁注面板 {asidePanelOpen ? '✓' : ''}
         </button>
         <button type="button" onclick={() => blockRemote = !blockRemote}>
           {blockRemote ? "允许远程图片" : "阻止远程图片"}
