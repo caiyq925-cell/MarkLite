@@ -1185,7 +1185,7 @@
             <button type="button" title="缩小" onclick={() => zoomBy(0.8)}>−</button>
             <button type="button" title="放大" onclick={() => zoomBy(1.25)}>+</button>
             <button type="button" title="重置" onclick={() => { zoomScale = 1; panOffset = { x: 0, y: 0 }; }}>⟳</button>
-            <button type="button" title="关闭" onclick={closeZoom}>�button>
+            <button type="button" title="关闭" onclick={closeZoom}>×</button>
           </div>
         </div>
         <div
