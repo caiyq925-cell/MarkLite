@@ -182,7 +182,9 @@ async function renderMermaidBlocks(html: string, dark: boolean): Promise<string>
     try {
       // mermaid 会按 id 向 DOM 挂临时节点，多图表必须用互不重复的 id
       const result = await mermaid.render(`mermaid-${++mermaidSeq}`, decoded);
-      results.push(`<div class="mermaid-svg">${result.svg}</div>`);
+      results.push(
+        `<div class="mermaid-svg">${result.svg}<button class="mermaid-magnifier" title="放大图表" type="button"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M11.742 10.344a6 6 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.742-.344a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/><path d="M5.00012 4.50006H7.50012V5.50006H6.00012V7.00006H5.00012V5.50006H4.00012V4.50006H5.00012Z"/></svg></button></div>`,
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       results.push(`<pre class="mermaid-error">图表渲染失败：${md.utils.escapeHtml(msg)}</pre>`);

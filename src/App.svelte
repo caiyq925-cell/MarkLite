@@ -51,6 +51,14 @@
   let dragging = false;
   let splitRatio = $state(0.5);
   let sourceVisible = $state(false);
+  // 图表放大弹层
+  let zoomOpen = $state(false);
+  let zoomSvg = $state("");
+  let zoomScale = $state(1);
+  let zoomTitle = $state("");
+  let panning = false;
+  let panStart = { x: 0, y: 0 };
+  let panOffset = { x: 0, y: 0 };
   let scrollUnlisten: (() => void) | null = null;
   let previewScrollUnlisten: (() => void) | null = null;
   let syncing = false;
@@ -558,6 +566,59 @@
     dragging = false;
   }
 
+  // ── 图表放大 ─────────────────────────────────────────────────────────
+  function openZoom(svg: string, title: string) {
+    zoomSvg = svg;
+    zoomTitle = title;
+    zoomScale = 1;
+    panOffset = { x: 0, y: 0 };
+    panning = false;
+    zoomOpen = true;
+  }
+
+  function closeZoom() {
+    zoomOpen = false;
+    zoomSvg = "";
+    zoomScale = 1;
+    panOffset = { x: 0, y: 0 };
+  }
+
+  function zoomBy(factor: number) {
+    zoomScale = Math.min(4, Math.max(0.5, zoomScale * factor));
+  }
+
+  function onZoomWheel(e: WheelEvent) {
+    e.preventDefault();
+    zoomBy(e.deltaY < 0 ? 1.1 : 0.9);
+  }
+
+  function onZoomPointerDown(e: PointerEvent) {
+    panning = true;
+    panStart = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+  }
+
+  function onZoomPointerMove(e: PointerEvent) {
+    if (!panning) return;
+    panOffset = { x: e.clientX - panStart.x, y: e.clientY - panStart.y };
+  }
+
+  function onZoomPointerUp() {
+    panning = false;
+  }
+
+  // 点击预览区：捕获图表放大按钮
+  function onPreviewPointerDown(e: PointerEvent) {
+    const target = e.target as HTMLElement;
+    const btn = target.closest(".mermaid-magnifier") as HTMLElement | null;
+    if (!btn) return;
+    const container = btn.parentElement;
+    if (!container) return;
+    const svg = container.querySelector("svg")?.outerHTML;
+    if (!svg) return;
+    e.preventDefault();
+    openZoom(svg, "图表");
+  }
+
   // 胶囊避开编辑器原生滚动条：滚动条宽度 = offsetWidth - clientWidth
   function updateRailPos() {
     if (!editor) return;
@@ -640,7 +701,11 @@
     const host = previewHost;
     if (!host) return;
     host.addEventListener("scroll", onPreviewScroll, { passive: true });
-    previewScrollUnlisten = () => host.removeEventListener("scroll", onPreviewScroll);
+    host.addEventListener("pointerdown", onPreviewPointerDown);
+    previewScrollUnlisten = () => {
+      host.removeEventListener("scroll", onPreviewScroll);
+      host.removeEventListener("pointerdown", onPreviewPointerDown);
+    };
     return () => {
       previewScrollUnlisten?.();
       previewScrollUnlisten = null;
@@ -1095,6 +1160,40 @@
       </div>
     </div>
   </div>
+  {/if}
+
+  {#if zoomOpen}
+    <div
+      class="zoom-backdrop"
+      onclick={(e) => { if (e.target === e.currentTarget) closeZoom(); }}
+      onwheel={onZoomWheel}
+    >
+      <div class="zoom-container" onclick={(e) => e.stopPropagation()}>
+        <div class="zoom-header">
+          <span class="zoom-title">{zoomTitle}</span>
+          <span class="zoom-scale">{Math.round(zoomScale * 100)}%</span>
+          <div class="zoom-actions">
+            <button type="button" title="缩小" onclick={() => zoomBy(0.8)}>−</button>
+            <button type="button" title="放大" onclick={() => zoomBy(1.25)}>+</button>
+            <button type="button" title="重置" onclick={() => { zoomScale = 1; panOffset = { x: 0, y: 0 }; }}>⟳</button>
+            <button type="button" title="关闭" onclick={closeZoom}>�button>
+          </div>
+        </div>
+        <div
+          class="zoom-svg-wrap"
+          onpointerdown={onZoomPointerDown}
+          onpointermove={onZoomPointerMove}
+          onpointerup={onZoomPointerUp}
+          onpointerleave={onZoomPointerUp}
+        >
+          <div
+            class="zoom-svg-inner"
+            style={`transform: translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale});`}
+            innerHTML={zoomSvg}
+          ></div>
+        </div>
+      </div>
+    </div>
   {/if}
 
   {#if asidePanelOpen && asideEditId && active}
