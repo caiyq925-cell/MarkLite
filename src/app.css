@@ -890,13 +890,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .zoom-container {
   position: relative;
   width: 92vw;
-  max-height: 88vh;
+  height: 88vh;
   background: var(--bg-elev);
   border-radius: 12px;
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 .zoom-header {
   display: flex;
