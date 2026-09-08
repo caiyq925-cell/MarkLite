@@ -161,6 +161,16 @@
     }
   }
 
+  function rememberRecent(path: string) {
+    recents = pushRecent(recents, path);
+    void persistConfig();
+  }
+
+  function clearRecentList() {
+    recents = [];
+    void persistConfig();
+  }
+
   function watchActiveFile(path: string) {
     if (!path) return;
     void invoke("watch_file", { path }).catch(() => {});
@@ -187,11 +197,6 @@
         { label: "忽略", run: () => { prompt = null; } },
       ],
     };
-  }
-
-  function clearRecentList() {
-    recents = [];
-    void persistConfig();
   }
 
   async function openPath(path: string, force = false) {
