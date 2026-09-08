@@ -962,8 +962,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   justify-content: center;
   min-height: 0;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 .zoom-svg-wrap:active { cursor: grabbing; }
+.zoom-svg-wrap svg {
+  pointer-events: none;
+}
 .zoom-svg-inner {
   transform-origin: center center;
 }

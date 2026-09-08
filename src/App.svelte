@@ -599,9 +599,13 @@
     zoomBy(e.deltaY < 0 ? 1.1 : 0.9);
   }
 
+  let zoomSvgWrapEl: HTMLDivElement | undefined = $state();
+
   function onZoomPointerDown(e: PointerEvent) {
     panning = true;
     panStart = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    // 指针捕获：快速拖动时鼠标即使移出元素区域，事件仍持续送达
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function onZoomPointerMove(e: PointerEvent) {
@@ -609,8 +613,13 @@
     panOffset = { x: e.clientX - panStart.x, y: e.clientY - panStart.y };
   }
 
-  function onZoomPointerUp() {
+  function onZoomPointerUp(e: PointerEvent) {
     panning = false;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* pointer already released */
+    }
   }
 
   // 点击预览区：捕获图表放大按钮
@@ -1192,10 +1201,10 @@
         </div>
         <div
           class="zoom-svg-wrap"
+          bind:this={zoomSvgWrapEl}
           onpointerdown={onZoomPointerDown}
           onpointermove={onZoomPointerMove}
           onpointerup={onZoomPointerUp}
-          onpointerleave={onZoomPointerUp}
         >
           <div
             class="zoom-svg-inner"
