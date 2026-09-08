@@ -57,9 +57,19 @@ md.use(markdownItKatex);
 // ── DOMPurify 配置 ──────────────────────────────────────────────────────
 const PURIFY: DOMPurify.Config = {
   ALLOWED_URI_REGEXP: /^(?:(?:https?|data|asset):|http:\/\/asset\.localhost|#)/i,
-  FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
-  ALLOWED_ATTR: ["class", "id", "style", "open"],
-  ADD_ATTR: ["target", "rel", "class", "id", "open", "style"],
+  FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "style"],
+  ADD_TAGS: [
+    "svg", "g", "path", "rect", "circle", "ellipse", "line",
+    "polyline", "polygon", "defs", "linearGradient", "radialGradient",
+    "stop", "clipPath", "filter", "feGaussianBlur", "feColorMatrix",
+    "feMerge", "feMergeNode", "image", "use", "marker", "text",
+    "tspan", "desc", "title",
+  ],
+  ADD_ATTR: [
+    "viewBox", "d", "fill", "stroke", "stroke-width", "transform",
+    "cx", "cy", "r", "x", "y", "width", "height", "points",
+    "xmlns", "xml:space", "class", "id", "style", "open",
+  ],
 };
 
 // ── Mermaid 引擎 ────────────────────────────────────────────────────────
