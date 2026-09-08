@@ -538,6 +538,74 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   flex: 1;
   min-height: 0;
   overflow: auto;
+  position: relative;
+}
+/* CodeMirror 搜索面板：确保可见、贴合主题 */
+.cm-search {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 6px 8px;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.cm-search input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  min-width: 120px;
+}
+.cm-search input:focus {
+  border-color: var(--focus);
+}
+.cm-search button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.cm-search button:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.cm-search button:active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.cm-search .cm-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.cm-search .cm-button:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.cm-search label {
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cm-search input[type="checkbox"] {
+  min-width: auto;
+  width: auto;
 }
 .preview-host {
   background: var(--preview-bg);
