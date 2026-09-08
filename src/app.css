@@ -923,6 +923,35 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   padding: 2px 10px;
   font-size: 13px;
 }
+.zoom-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.zoom-actions button {
+  min-width: 28px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 6px;
+}
+.zoom-actions button:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border-color: var(--accent);
+}
+/* 弹层内图表：覆盖预览区的宽度限制，让它按原始尺寸展示，由外层 transform 控制缩放 */
+.zoom-svg-inner > svg {
+  max-width: none !important;
+  height: auto;
+}
 .zoom-svg-wrap {
   flex: 1;
   overflow: hidden;

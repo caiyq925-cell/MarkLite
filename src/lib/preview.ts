@@ -55,21 +55,14 @@ md.use(taskLists, { enabled: true, label: true });
 md.use(markdownItKatex);
 
 // ── DOMPurify 配置 ──────────────────────────────────────────────────────
+// DOMPurify 默认白名单已完整支持 SVG（标签+几何属性）。
+// 之前用 ADD_ATTR 枚举 SVG 属性，遗漏 x/y/width/height/viewBox 等，
+// 导致 mermaid 图表在预览中丢失所有尺寸变成空白——不要再用枚举白名单过滤 SVG。
 const PURIFY: DOMPurify.Config = {
   ALLOWED_URI_REGEXP: /^(?:(?:https?|data|asset):|http:\/\/asset\.localhost|#)/i,
-  FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "style"],
-  ADD_TAGS: [
-    "svg", "g", "path", "rect", "circle", "ellipse", "line",
-    "polyline", "polygon", "defs", "linearGradient", "radialGradient",
-    "stop", "clipPath", "filter", "feGaussianBlur", "feColorMatrix",
-    "feMerge", "feMergeNode", "image", "use", "marker", "text",
-    "tspan", "desc", "title",
-  ],
-  ADD_ATTR: [
-    "viewBox", "d", "fill", "stroke", "stroke-width", "transform",
-    "cx", "cy", "r", "x", "y", "width", "height", "points",
-    "xmlns", "xml:space", "class", "id", "style", "open",
-  ],
+  FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
+  ALLOWED_ATTR: ["class", "id", "style", "open"],
+  ADD_ATTR: ["target", "rel", "class", "id", "open", "style"],
 };
 
 // ── Mermaid 引擎 ────────────────────────────────────────────────────────
