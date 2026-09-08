@@ -1,6 +1,6 @@
 [package]
 name = "marklite"
-version = "0.1.6"
+version = "0.1.7"
 description = "Lightweight offline Markdown viewer for Windows"
 authors = ["MarkLite"]
 edition = "2021"
