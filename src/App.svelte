@@ -179,8 +179,10 @@
   // 外部文件修改监听：文件变化时弹提示，用户确认后重新加载
   function onFileChanged(ev: { payload: string }) {
     const changedPath = ev.payload;
-    if (!active || active.path !== changedPath) return;
-    // 用户正在编辑时不打扰（避免覆盖未保存内容）
+    if (!active) return;
+    // 规范化路径后比较（处理大小写、斜杠、尾部分隔符等差异）
+    const normalize = (p: string) => p.toLowerCase().replace(/\\/g, "/").replace(/\/+$/, "");
+    if (normalize(active.path) !== normalize(changedPath)) return;
     if (active.dirty) return;
     prompt = {
       title: "文件已更新",
@@ -1198,8 +1200,7 @@
           <div
             class="zoom-svg-inner"
             style={`transform: translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale});`}
-            innerHTML={zoomSvg}
-          ></div>
+          >{@html zoomSvg}</div>
         </div>
       </div>
     </div>
