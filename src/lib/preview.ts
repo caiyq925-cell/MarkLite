@@ -32,6 +32,9 @@ const md = new MarkdownIt({
   highlight(code, lang) {
     if (!lang) return md.utils.escapeHtml(code);
     const fullLang = lang.toLowerCase();
+    // mermaid 代码块保留原文，交给 renderMermaidBlocks 解析；
+    // 若走 Prism 高亮，注入的 <span> 会混进图表源码导致解析失败
+    if (fullLang === "mermaid") return md.utils.escapeHtml(code);
     const grammar = Prism.languages[fullLang];
     if (!grammar) {
       // 尝试加载语言（同步模式下返回纯文本，异步加载后会重新渲染）
@@ -152,11 +155,21 @@ export async function renderPreview(
   return html;
 }
 
+let mermaidSeq = 0;
+
 async function renderMermaidBlocks(html: string, dark: boolean): Promise<string> {
-  const mermaidMod = await loadMermaid();
+  const mermaid = (await loadMermaid()).default;
   // markdown-it 默认把 ```mermaid 渲染为 <pre><code class="language-mermaid">
   const blocks = [...html.matchAll(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/gi)];
   if (blocks.length === 0) return html;
+
+  // 每次渲染前按当前主题初始化，切换深浅色后重渲染才能拿到对应配色
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: dark ? "dark" : "default",
+    securityLevel: "strict",
+  });
+  mermaidBooted = true;
 
   const results: string[] = [];
   for (const [, code] of blocks) {
@@ -167,7 +180,8 @@ async function renderMermaidBlocks(html: string, dark: boolean): Promise<string>
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'");
     try {
-      const result = await mermaidMod.render("mermaid", decoded, dark);
+      // mermaid 会按 id 向 DOM 挂临时节点，多图表必须用互不重复的 id
+      const result = await mermaid.render(`mermaid-${++mermaidSeq}`, decoded);
       results.push(`<div class="mermaid-svg">${result.svg}</div>`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
