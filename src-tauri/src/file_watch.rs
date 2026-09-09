@@ -14,9 +14,18 @@ pub struct WatchState {
     watched_files: Arc<Mutex<HashSet<PathBuf>>>,
 }
 
-/// Windows 路径大小写不敏感，统一小写规范化用于比较
+/// Windows 路径大小写不敏感，统一小写规范化用于比较（去掉 \\?\ verbatim 前缀）
 fn norm(p: &Path) -> String {
-    p.to_string_lossy().to_lowercase().replace('\\', "/")
+    let s = p.to_string_lossy();
+    let s = s.strip_prefix("\\\\?\\").unwrap_or(&s);
+    s.to_lowercase().replace('\\', "/")
+}
+
+/// 取文件名（小写），用于不依赖目录前缀的文件名匹配
+fn file_name(p: &Path) -> String {
+    p.file_name()
+        .map(|f| f.to_string_lossy().to_lowercase())
+        .unwrap_or_default()
 }
 
 fn start_watcher(app: AppHandle, files: Arc<Mutex<HashSet<PathBuf>>>) -> Result<RecommendedWatcher, notify::Error> {
@@ -28,11 +37,23 @@ fn start_watcher(app: AppHandle, files: Arc<Mutex<HashSet<PathBuf>>>) -> Result<
                     Ok(g) => g.clone(),
                     Err(_) => return,
                 };
-                // 事件路径与关注文件做大小写不敏感匹配（Modify/Create/Remove/Rename 都算变化，
-                // 覆盖"写临时文件+rename 覆盖"这类原子保存方式）
+                if tracked.is_empty() {
+                    return;
+                }
+                // 事件路径与关注文件做文件名级匹配（Modify/Create/Remove/Rename 都算变化）：
+                // - 事件文件名 == 目标文件名（覆盖 rename 目标、原地写入）
+                // - 事件文件名以 "目标文件名." 开头（覆盖 "note.md.tmp123" 这类原子保存临时文件）
+                // 不比较完整路径，规避 Windows verbatim 前缀 / 短路径 / 大小写差异
                 for path in &event.paths {
-                    let n = norm(path);
-                    if tracked.iter().any(|f| norm(f) == n) {
+                    let ev_name = file_name(path);
+                    if ev_name.is_empty() {
+                        continue;
+                    }
+                    let hit = tracked.iter().any(|f| {
+                        let t = file_name(f);
+                        ev_name == t || ev_name.starts_with(&format!("{}.", t))
+                    });
+                    if hit {
                         if let Some(p) = path.to_str() {
                             let _ = app.emit("file-changed", p.to_string());
                         }
@@ -53,7 +74,7 @@ pub fn watch_file(
     let file = dunce::canonicalize(Path::new(&path)).unwrap_or_else(|_| PathBuf::from(&path));
     let dir = file.parent().map(|d| d.to_path_buf());
 
-    // 记录关注文件（与回调共享同一份数据）
+    // 记录关注文件（watched_files 是 Arc，回调共享同一份，插入即时可见）
     {
         let mut files = state.watched_files.lock().map_err(|e| e.to_string())?;
         files.insert(file.clone());
@@ -63,7 +84,7 @@ pub fn watch_file(
         return Err("无法确定文件所在目录".into());
     };
 
-    // 首次调用时创建 watcher，回调持有 watched_files 的 Arc
+    // 首次调用时创建 watcher，回调持有 watched_files 的 Arc（与命令共享同一份）
     let mut wguard = state.watcher.lock().map_err(|e| e.to_string())?;
     if wguard.is_none() {
         *wguard = Some(
@@ -73,18 +94,24 @@ pub fn watch_file(
     }
     let mut watcher = wguard.take().unwrap();
 
-    // 同一目录只 watch 一次
-    let mut dirs = state.watched_dirs.lock().map_err(|e| e.to_string())?;
-    if !dirs.contains(&dir) {
-        watcher
-            .watch(&dir, RecursiveMode::NonRecursive)
-            .map_err(|e| format!("监听目录失败 {}: {}", dir.display(), e))?;
-        dirs.insert(dir);
-    }
-    drop(dirs);
-    drop(wguard);
-
+    // 同一目录只 watch 一次；无论 watch 是否成功都把 watcher 存回，避免后续调用时丢失
+    let result = {
+        let mut dirs = state.watched_dirs.lock().map_err(|e| e.to_string())?;
+        if dirs.contains(&dir) {
+            Ok(())
+        } else {
+            match watcher.watch(&dir, RecursiveMode::NonRecursive) {
+                Ok(()) => {
+                    dirs.insert(dir);
+                    Ok(())
+                }
+                Err(e) => Err(format!("监听目录失败 {}: {}", dir.display(), e)),
+            }
+        }
+    };
     *state.watcher.lock().map_err(|e| e.to_string())? = Some(watcher);
+    result?;
+
     Ok(())
 }
 

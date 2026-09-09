@@ -178,7 +178,9 @@
 
   function watchActiveFile(path: string) {
     if (!path) return;
-    void invoke("watch_file", { path }).catch(() => {});
+    void invoke("watch_file", { path }).catch((e) => {
+      console.warn("watch_file failed:", path, e);
+    });
   }
 
   // 外部文件修改监听：文件变化时弹提示，用户确认后重新加载
@@ -189,7 +191,12 @@
     if (Date.now() - lastSelfSave < SELF_SAVE_WINDOW) return;
     // 规范化路径后比较（处理大小写、斜杠、尾部分隔符等差异）
     const normalize = (p: string) => p.toLowerCase().replace(/\\/g, "/").replace(/\/+$/, "");
-    if (normalize(active.path) !== normalize(changedPath)) return;
+    // 事件路径可能是临时文件名（如 note.md.tmp123），取文件名做前缀匹配
+    const base = normalize(active.path).split("/").pop() ?? "";
+    const evBase = normalize(changedPath).split("/").pop() ?? "";
+    if (normalize(active.path) !== normalize(changedPath) && !evBase.startsWith(base + ".") && evBase !== base) {
+      return;
+    }
     if (active.dirty) return;
     prompt = {
       title: "文件已更新",
