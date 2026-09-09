@@ -58,7 +58,8 @@
   let zoomTitle = $state("");
   let panning = false;
   let panStart = { x: 0, y: 0 };
-  let panOffset = { x: 0, y: 0 };
+  // panOffset 参与 transform 渲染，必须是响应式状态，否则拖拽不会更新视图
+  let panOffset = $state({ x: 0, y: 0 });
   let scrollUnlisten: (() => void) | null = null;
   let previewScrollUnlisten: (() => void) | null = null;
   let syncing = false;
