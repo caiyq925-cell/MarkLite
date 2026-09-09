@@ -1069,19 +1069,26 @@
         </div>
         <div class="split" onmousedown={onSplitMouseDown}></div>
         {/if}
-        {#if asidePanelOpen && activeAsides.length > 0}
+        {#if asidePanelOpen}
         <div class="pane pane-aside" style="width: 240px">
           <div class="pane-label">
             <span class="pane-label-text">旁注</span>
+            <button type="button" class="aside-new" title="新建旁注" onclick={() => editor?.insertAside()}>+ 新建</button>
             <button type="button" class="aside-close" onclick={closeAsidePanel}>×</button>
           </div>
           <div class="aside-list">
+            {#if activeAsides.length === 0}
+              <div class="aside-empty">
+                当前文档还没有旁注。<br />选中文字后点「+ 新建」，或在源码中写入 <code>??旁注??</code>。
+              </div>
+            {:else}
             {#each activeAsides as a (a.from + "-" + a.to)}
               <div class="aside-item" onclick={() => openAsidePanel(a, 0, 0)}>
                 <div class="aside-line">第 {editor?.view.state.doc.lineAt(a.from).number ?? 1} 行</div>
                 <div class="aside-preview">{a.content.slice(0, 60)}{a.content.length > 60 ? "…" : ""}</div>
               </div>
             {/each}
+            {/if}
           </div>
         </div>
         {/if}

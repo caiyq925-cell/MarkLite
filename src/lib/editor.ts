@@ -17,6 +17,8 @@ export interface EditorHandle {
   openFind: () => void;
   closeFind: () => void;
   scrollToLine: (line: number) => void;
+  /** 把当前选区包裹成旁注 ??...??；无选区时在光标处插入占位旁注 */
+  insertAside: () => void;
   destroy: () => void;
 }
 
@@ -102,6 +104,26 @@ export function createEditor(
         selection: { anchor: pos },
         effects: EditorView.scrollIntoView(pos, { y: "start" }),
       });
+    },
+    insertAside() {
+      const { from, to, empty } = view.state.selection.main;
+      const text = view.state.sliceDoc(from, to);
+      // 无选区：插入 ??旁注?? 并把光标放到占位内容里
+      if (empty) {
+        const insert = "??旁注??";
+        view.dispatch({
+          changes: { from, insert },
+          selection: { anchor: from + 2, head: from + 4 },
+        });
+        return;
+      }
+      // 有选区：包裹成 ??选中内容??
+      const wrapped = `??${text}??`;
+      view.dispatch({
+        changes: { from, to, insert: wrapped },
+        selection: { anchor: from + 2, head: from + 2 + text.length },
+      });
+      view.focus();
     },
     destroy() {
       view.destroy();

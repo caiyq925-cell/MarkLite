@@ -1159,6 +1159,34 @@ pre.mermaid-error {
 .aside-close:hover {
   color: var(--text);
 }
+.aside-new {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--accent);
+  padding: 1px 6px;
+  margin-left: auto;
+  margin-right: 4px;
+}
+.aside-new:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+}
+.aside-empty {
+  padding: 16px 10px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.aside-empty code {
+  background: var(--fence-chip-bg);
+  border: 1px solid var(--fence-chip-border);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 12px;
+}
 .aside-editor-popup {
   position: absolute;
   z-index: 100;
