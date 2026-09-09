@@ -564,8 +564,12 @@
   }
 
   // 输入变化时重置到第一个匹配
-  function onPreviewFindInput() {
-    runPreviewFind(previewFindQuery);
+  // 注意：不能依赖 bind:value 的 previewFindQuery（Svelte5 中 oninput 触发时可能还是旧值），
+  // 必须从 event.target 直接取最新输入
+  function onPreviewFindInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    previewFindQuery = input.value;
+    runPreviewFind(input.value);
   }
 
   // 上/下一个匹配
@@ -579,6 +583,12 @@
     if (e.key === "Enter") {
       e.preventDefault();
       stepPreviewFind(e.shiftKey ? -1 : 1);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      stepPreviewFind(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      stepPreviewFind(-1);
     } else if (e.key === "Escape") {
       e.preventDefault();
       closePreviewFind();
@@ -1273,7 +1283,7 @@
                 bind:this={previewFindInputEl}
                 type="text"
                 placeholder="在预览中查找…"
-                bind:value={previewFindQuery}
+                value={previewFindQuery}
                 oninput={onPreviewFindInput}
                 onkeydown={onPreviewFindKeydown}
               />
