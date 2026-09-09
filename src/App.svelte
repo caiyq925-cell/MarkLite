@@ -172,6 +172,10 @@
     void persistConfig();
   }
 
+  // 自身保存后短时间内的文件事件视为自己触发的，不提示
+  let lastSelfSave = 0;
+  const SELF_SAVE_WINDOW = 1500;
+
   function watchActiveFile(path: string) {
     if (!path) return;
     void invoke("watch_file", { path }).catch(() => {});
@@ -181,6 +185,8 @@
   function onFileChanged(ev: { payload: string }) {
     const changedPath = ev.payload;
     if (!active) return;
+    // 自己保存刚触发的文件事件不提示
+    if (Date.now() - lastSelfSave < SELF_SAVE_WINDOW) return;
     // 规范化路径后比较（处理大小写、斜杠、尾部分隔符等差异）
     const normalize = (p: string) => p.toLowerCase().replace(/\\/g, "/").replace(/\/+$/, "");
     if (normalize(active.path) !== normalize(changedPath)) return;
@@ -299,6 +305,10 @@
       encodingHint = active.bom ? "UTF-8 BOM" : "UTF-8";
       await invoke("set_asset_root", { dir: parentDir(path) });
       if (saveAs) rememberRecent(path);
+      // 记录自己保存时间，避免文件事件回环提示"文件被外部修改"
+      lastSelfSave = Date.now();
+      // 另存为后路径可能变化，重新监听新文件
+      watchActiveFile(path);
     } catch (e) {
       errorText = String(e);
     }
