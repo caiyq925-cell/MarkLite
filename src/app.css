@@ -380,27 +380,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .tab .close { padding: 0 4px; opacity: 0.6; font-size: 13px; line-height: 1; }
 .tab-add {
-  align-self: center;
+  align-self: stretch;
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  margin-left: 2px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  width: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 18px;
   line-height: 1;
   color: var(--muted);
   cursor: pointer;
   background: transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .tab-add:hover {
   color: var(--accent);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border-color: var(--border);
 }
 .workspace {
   display: flex;
