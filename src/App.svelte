@@ -776,6 +776,11 @@
 
   // 点击预览区：捕获图表放大按钮
   function onPreviewPointerDown(e: PointerEvent) {
+    // 点击预览区时让它获得焦点，使 Ctrl+F 能识别焦点在预览（查找预览内容）
+    const host = getPreviewHost();
+    if (host && host !== document.activeElement) {
+      host.focus({ preventScroll: true });
+    }
     const target = e.target as HTMLElement;
     const btn = target.closest(".mermaid-magnifier");
     if (!btn) return;
@@ -1280,7 +1285,7 @@
               <button type="button" title="关闭 (Esc)" onclick={closePreviewFind}>×</button>
             </div>
           {/if}
-          <div class="preview-host" bind:this={previewHost}><div class="preview-content"></div></div>
+          <div class="preview-host" tabindex="-1" bind:this={previewHost}><div class="preview-content"></div></div>
         </div>
       </div>
     </div>

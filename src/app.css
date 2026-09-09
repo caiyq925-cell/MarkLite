@@ -701,6 +701,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   font-size: 15px;
   line-height: 1.7;
   color: var(--preview-text);
+  outline: none;
 }
 .preview-host h1 { font-size: 22px; line-height: 1.3; margin: 0 0 12px; color: var(--h1-color); font-weight: 700; border-bottom: 2px solid var(--heading-border); padding-bottom: 8px; }
 .preview-host h2 { font-size: 18px; line-height: 1.4; margin: 28px 0 12px; color: var(--h2-color); font-weight: 700; border-bottom: 1px solid var(--heading-border); padding-bottom: 6px; }
