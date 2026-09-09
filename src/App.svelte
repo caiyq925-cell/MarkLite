@@ -592,7 +592,7 @@
   }
 
   function zoomBy(factor: number) {
-    zoomScale = Math.min(4, Math.max(0.5, zoomScale * factor));
+    zoomScale = Math.min(10, Math.max(0.5, zoomScale * factor));
   }
 
   function onZoomWheel(e: WheelEvent) {
