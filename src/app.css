@@ -379,6 +379,29 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   border-color: var(--border);
 }
 .tab .close { padding: 0 4px; opacity: 0.6; font-size: 13px; line-height: 1; }
+.tab-add {
+  align-self: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-left: 2px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+}
+.tab-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
 .workspace {
   display: flex;
   flex: 1;

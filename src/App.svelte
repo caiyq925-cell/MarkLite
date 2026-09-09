@@ -369,6 +369,11 @@
     }
   }
 
+  // 「+」回到首页：已打开的标签保留在 tab 栏（含未保存状态），仅取消激活显示首页
+  function goHome() {
+    activeId = null;
+  }
+
   async function closeWindowFlow(): Promise<boolean> {
     while (tabs.some((t) => t.dirty)) {
       const dirty = tabs.find((t) => t.dirty)!;
@@ -1049,6 +1054,7 @@
         <button class="close" type="button" aria-label="关闭" onclick={() => requestClose(tab)}>×</button>
       </div>
     {/each}
+    <button class="tab-add" type="button" title="打开历史文件（首页）" onclick={goHome}>+</button>
   </div>
 
   {#if !active}
