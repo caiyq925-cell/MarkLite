@@ -528,6 +528,70 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   justify-content: space-between;
   gap: 6px;
 }
+/* 预览查找条 */
+.preview-findbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+  flex-shrink: 0;
+}
+.preview-findbar input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+.preview-findbar input:focus {
+  border-color: var(--focus);
+}
+.preview-findbar .preview-find-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 42px;
+  text-align: center;
+  font-family: "Cascadia Code", Consolas, monospace;
+}
+.preview-findbar button {
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1;
+}
+.preview-findbar button:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border-color: var(--accent);
+}
+/* 预览查找高亮 */
+.preview-host mark.ml-find-hit {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.preview-host mark.ml-find-current {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: 2px;
+  padding: 0 1px;
+}
 .pane-label .pane-label-text {
   flex: 1;
   overflow: hidden;

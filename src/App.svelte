@@ -45,6 +45,12 @@
   let editor: EditorHandle | null = null;
   let boundId: string | null = null;
   let previewedId: string | null = null;
+  // 预览查找
+  let previewFindOpen = $state(false);
+  let previewFindQuery = $state("");
+  let previewFindIndex = $state(-1);
+  let previewFindCount = $state(0);
+  let previewFindInputEl: HTMLInputElement | undefined = $state();
   let tocRailEl: HTMLDivElement | undefined = $state();
   let tocPanelEl: HTMLDivElement | undefined = $state();
   let tocCloseTimer = 0;
@@ -456,6 +462,129 @@
     scrollPreviewToHeading(h);
   }
 
+  // ── 预览查找 ─────────────────────────────────────────────────────────
+  const PREVIEW_FIND_MARK = "ml-find-hit";
+  const PREVIEW_FIND_ACTIVE = "ml-find-current";
+
+  function openPreviewFind() {
+    previewFindOpen = true;
+    previewFindQuery = "";
+    previewFindIndex = -1;
+    previewFindCount = 0;
+    // 等一帧让输入框渲染后聚焦
+    requestAnimationFrame(() => previewFindInputEl?.focus());
+  }
+
+  function closePreviewFind() {
+    previewFindOpen = false;
+    previewFindQuery = "";
+    previewFindIndex = -1;
+    previewFindCount = 0;
+    clearPreviewFindMarks();
+  }
+
+  // 清除全部高亮标记
+  function clearPreviewFindMarks() {
+    const host = getPreviewHost();
+    if (!host) return;
+    const marks = host.querySelectorAll(`.${PREVIEW_FIND_MARK}`);
+    marks.forEach((m) => {
+      const parent = m.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(m.textContent ?? ""), m);
+      parent.normalize();
+    });
+  }
+
+  // 用 TreeWalker 遍历文本节点做大小写不敏感匹配，<mark> 包裹
+  function runPreviewFind(query: string) {
+    const host = getPreviewHost();
+    if (!host) {
+      previewFindCount = 0;
+      previewFindIndex = -1;
+      return;
+    }
+    clearPreviewFindMarks();
+    const q = query.trim();
+    if (!q) {
+      previewFindCount = 0;
+      previewFindIndex = -1;
+      return;
+    }
+    const lower = q.toLowerCase();
+    const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        // 跳过已被清空的空白节点和脚本/样式
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if ((node.parentElement?.closest("script,style")) != null) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    let count = 0;
+    let firstFound = false;
+    const textNodes: Text[] = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+    for (const node of textNodes) {
+      const text = node.nodeValue ?? "";
+      let idx = text.toLowerCase().indexOf(lower);
+      if (idx === -1) continue;
+      firstFound = true;
+      const frag = document.createDocumentFragment();
+      let pos = 0;
+      while (idx !== -1) {
+        if (idx > pos) frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+        const mark = document.createElement("mark");
+        mark.className = PREVIEW_FIND_MARK;
+        mark.textContent = text.slice(idx, idx + q.length);
+        frag.appendChild(mark);
+        pos = idx + q.length;
+        idx = text.toLowerCase().indexOf(lower, pos);
+        count++;
+      }
+      if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+      node.parentNode?.replaceChild(frag, node);
+    }
+    previewFindCount = count;
+    previewFindIndex = firstFound && count > 0 ? 0 : -1;
+    markCurrentPreviewFind();
+  }
+
+  // 高亮当前匹配项并滚动到可视区域
+  function markCurrentPreviewFind() {
+    const host = getPreviewHost();
+    if (!host) return;
+    const marks = host.querySelectorAll(`.${PREVIEW_FIND_MARK}`);
+    marks.forEach((m, i) => {
+      m.classList.toggle(PREVIEW_FIND_ACTIVE, i === previewFindIndex);
+    });
+    const current = marks[previewFindIndex] as HTMLElement | undefined;
+    if (current) {
+      current.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }
+
+  // 输入变化时重置到第一个匹配
+  function onPreviewFindInput() {
+    runPreviewFind(previewFindQuery);
+  }
+
+  // 上/下一个匹配
+  function stepPreviewFind(dir: 1 | -1) {
+    if (!previewFindCount) return;
+    previewFindIndex = (previewFindIndex + dir + previewFindCount) % previewFindCount;
+    markCurrentPreviewFind();
+  }
+
+  function onPreviewFindKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      stepPreviewFind(e.shiftKey ? -1 : 1);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      closePreviewFind();
+    }
+  }
+
   // 同步锁：主动滚动后短暂锁定，避免两个方向的 scroll 事件互相触发（回声）
   function lockSync() {
     syncing = true;
@@ -736,6 +865,13 @@
     if (panePreview && previewHtml) {
       const el = panePreview.querySelector<HTMLElement>(".preview-content");
       if (el) el.innerHTML = previewHtml;
+      // 内容重渲染后，若有激活的查找则重新执行，否则清空状态
+      if (previewFindOpen && previewFindQuery.trim()) {
+        runPreviewFind(previewFindQuery);
+      } else {
+        previewFindCount = 0;
+        previewFindIndex = -1;
+      }
     }
   });
 
@@ -820,7 +956,16 @@
       nextTab();
     } else if (ctrl && e.key.toLowerCase() === "f") {
       e.preventDefault();
-      editor?.openFind();
+      // 焦点在预览区时查找预览内容，否则查找编辑器
+      const host = getPreviewHost();
+      const focusInPreview = host?.contains(document.activeElement) ?? false;
+      if (focusInPreview) {
+        editor?.closeFind();
+        openPreviewFind();
+      } else {
+        closePreviewFind();
+        editor?.openFind();
+      }
     }
   }
 
@@ -1117,6 +1262,24 @@
         {/if}
         <div id="pane-preview" class="pane pane-preview">
           <div class="pane-label"><span class="pane-label-text">预览</span></div>
+          {#if previewFindOpen}
+            <div class="preview-findbar">
+              <input
+                bind:this={previewFindInputEl}
+                type="text"
+                placeholder="在预览中查找…"
+                bind:value={previewFindQuery}
+                oninput={onPreviewFindInput}
+                onkeydown={onPreviewFindKeydown}
+              />
+              <span class="preview-find-count">
+                {previewFindCount > 0 ? `${previewFindIndex + 1}/${previewFindCount}` : "0/0"}
+              </span>
+              <button type="button" title="上一个 (Shift+Enter)" onclick={() => stepPreviewFind(-1)}>↑</button>
+              <button type="button" title="下一个 (Enter)" onclick={() => stepPreviewFind(1)}>↓</button>
+              <button type="button" title="关闭 (Esc)" onclick={closePreviewFind}>×</button>
+            </div>
+          {/if}
           <div class="preview-host" bind:this={previewHost}><div class="preview-content"></div></div>
         </div>
       </div>
