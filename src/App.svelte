@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, untrack } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -51,6 +51,7 @@
   let previewFindIndex = $state(-1);
   let previewFindCount = $state(0);
   let previewFindInputEl: HTMLInputElement | undefined = $state();
+  let previewFindRaf = 0;
   let tocRailEl: HTMLDivElement | undefined = $state();
   let tocPanelEl: HTMLDivElement | undefined = $state();
   let tocCloseTimer = 0;
@@ -549,7 +550,8 @@
     markCurrentPreviewFind();
   }
 
-  // 高亮当前匹配项并滚动到可视区域
+  // 高亮当前匹配项并滚动到可视区域（手动计算 scrollTop，规避 WebView2 嵌套滚动容器中
+  // scrollIntoView 静默失效的问题）
   function markCurrentPreviewFind() {
     const host = getPreviewHost();
     if (!host) return;
@@ -558,9 +560,12 @@
       m.classList.toggle(PREVIEW_FIND_ACTIVE, i === previewFindIndex);
     });
     const current = marks[previewFindIndex] as HTMLElement | undefined;
-    if (current) {
-      current.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
+    if (!current) return;
+    const hostRect = host.getBoundingClientRect();
+    const elRect = current.getBoundingClientRect();
+    // 让当前匹配项滚动到可视区垂直居中附近
+    const target = host.scrollTop + (elRect.top - hostRect.top) - host.clientHeight / 2 + elRect.height / 2;
+    host.scrollTop = Math.max(0, target);
   }
 
   // 输入变化时重置到第一个匹配
@@ -569,7 +574,11 @@
   function onPreviewFindInput(e: Event) {
     const input = e.target as HTMLInputElement;
     previewFindQuery = input.value;
-    runPreviewFind(input.value);
+    // 用 rAF 延迟到当前帧渲染完成后再执行查找，避免与 $effect 的 innerHTML 重置竞争
+    cancelAnimationFrame(previewFindRaf);
+    previewFindRaf = requestAnimationFrame(() => {
+      runPreviewFind(input.value);
+    });
   }
 
   // 上/下一个匹配
@@ -874,6 +883,8 @@
   }
 
   // 预览内容更新：用 $effect 确保 DOM 已挂载后再设 innerHTML
+  // 注意：用 untrack 包裹预览查找相关状态，effect 只响应 previewHtml 变化，
+  // 否则每次输入都会触发 innerHTML 重置，抹掉刚打上的查找高亮
   $effect(() => {
     void previewHtml;
     const panePreview = document.getElementById("pane-preview");
@@ -881,8 +892,10 @@
       const el = panePreview.querySelector<HTMLElement>(".preview-content");
       if (el) el.innerHTML = previewHtml;
       // 内容重渲染后，若有激活的查找则重新执行，否则清空状态
-      if (previewFindOpen && previewFindQuery.trim()) {
-        runPreviewFind(previewFindQuery);
+      const findOpen = untrack(() => previewFindOpen);
+      const query = untrack(() => previewFindQuery);
+      if (findOpen && query.trim()) {
+        runPreviewFind(query);
       } else {
         previewFindCount = 0;
         previewFindIndex = -1;
