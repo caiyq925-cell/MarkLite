@@ -174,3 +174,6 @@
 *.lz
 *.lzma
 *.iso
+
+# ZCode local files
+.zcode/

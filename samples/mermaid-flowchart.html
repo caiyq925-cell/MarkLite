@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Mermaid Flowchart Preview</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { margin: 0; padding: 40px; background: #fff; font-family: sans-serif; }
+    h2 { color: #333; font-size: 16px; margin-bottom: 16px; }
+    .mermaid { display: flex; justify-content: center; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 6px; font-size: 13px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h2>Mermaid 源码</h2>
+  <pre id="src"></pre>
+  <h2>渲染结果</h2>
+  <div class="mermaid">
+    flowchart LR
+      subgraph Controllers["Controllers"]
+        C1["AuthController"]
+        C2["UserController"]
+      end
+      C1 --> DB[("Database")]
+      C2 --> DB
+  </div>
+  <script>
+    document.getElementById('src').textContent = document.querySelector('.mermaid').textContent;
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</body>
+</html>
