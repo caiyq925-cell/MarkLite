@@ -21,6 +21,13 @@ const COMMON_LANGS = [
 ];
 void loadLanguages(COMMON_LANGS);
 
+// ── 大文件预览优化 ──────────────────────────────────────────────────────
+// 超过此字符数时跳过 Prism 代码高亮，只做 HTML 转义。
+// Prism 对大文档中的大量代码块逐个 tokenize 会显著阻塞主线程。
+const LARGE_SOURCE_THRESHOLD = 200_000;
+// 渲染期间临时关闭高亮的开关（renderMarkdown 是同步的，无 await 穿插，安全）
+let skipHighlight = false;
+
 // ── Markdown 高亮配置 ──────────────────────────────────────────────────
 const md = new MarkdownIt({
   html: true,
@@ -35,6 +42,8 @@ const md = new MarkdownIt({
     // mermaid 代码块保留原文，交给 renderMermaidBlocks 解析；
     // 若走 Prism 高亮，注入的 <span> 会混进图表源码导致解析失败
     if (fullLang === "mermaid") return md.utils.escapeHtml(code);
+    // 大文件跳过 Prism 高亮，避免逐个代码块 tokenize 阻塞主线程
+    if (skipHighlight) return md.utils.escapeHtml(code);
     const grammar = Prism.languages[fullLang];
     if (!grammar) {
       // 尝试加载语言（同步模式下返回纯文本，异步加载后会重新渲染）
@@ -135,17 +144,30 @@ export async function renderPreview(
   source: string,
   options: { docDir: string | null; blockRemote: boolean; dark: boolean },
 ): Promise<string> {
+  const isLarge = source.length > LARGE_SOURCE_THRESHOLD;
+
   // highlight 回调是同步的：先把文档用到的语言全部加载完，再渲染，
-  // 否则首次渲染时 grammar 未注册会退回纯文本且不会重渲染
-  const fenceLangs = extractFenceLangs(source);
-  if (fenceLangs.length) {
-    try {
-      await loadLanguages(fenceLangs);
-    } catch {
-      /* 个别语言加载失败时按纯文本显示 */
+  // 否则首次渲染时 grammar 未注册会退回纯文本且不会重渲染。
+  // 大文件跳过高亮，也无需加载语言。
+  if (!isLarge) {
+    const fenceLangs = extractFenceLangs(source);
+    if (fenceLangs.length) {
+      try {
+        await loadLanguages(fenceLangs);
+      } catch {
+        /* 个别语言加载失败时按纯文本显示 */
+      }
     }
   }
-  let html = renderMarkdown(source);
+
+  // renderMarkdown 是同步调用，无 await 穿插，临时开关安全
+  skipHighlight = isLarge;
+  let html: string;
+  try {
+    html = renderMarkdown(source);
+  } finally {
+    skipHighlight = false;
+  }
   html = rewriteImages(html, options.docDir, options.blockRemote);
   if (hasMermaidFence(source)) {
     try {

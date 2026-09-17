@@ -76,11 +76,16 @@ export function sortNonOverlapping(blocks: FenceBlock[]): FenceBlock[] {
   return result;
 }
 
+/** 大文件阈值：超过此字符数时跳行内围栏装饰，避免每次按键全文 toString + 正则扫描卡顿 */
+const LARGE_DOC_THRESHOLD = 200_000;
+
 /**
  * CodeMirror 6 插件：为行内围栏添加装饰
  */
 export function inlineFencePlugin(): Extension {
   return EditorView.decorations.compute(["doc"], (state) => {
+    // 大文件跳过：toString + 多次正则 + 排序在每次按键时对大文档开销过大
+    if (state.doc.length > LARGE_DOC_THRESHOLD) return Decoration.none;
     const text = state.doc.toString();
     const blocks = sortNonOverlapping(findFenceBlocks(text));
     const builder = new RangeSetBuilder<Decoration>();

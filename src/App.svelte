@@ -92,7 +92,9 @@
   const active = $derived(tabs.find((t) => t.id === activeId) ?? null);
   const resolvedTheme = $derived(effectiveTheme(theme, followSystem, systemDark));
   const dark = $derived(isDarkTheme(resolvedTheme));
-  const activeAsides = $derived(active ? scanAsides(active.text) : []);
+  const activeAsides = $derived(
+    active && active.text.length < 200_000 ? scanAsides(active.text) : [],
+  );
 
   // 应用主题与强调色到 <html>
   $effect(() => {
@@ -204,17 +206,20 @@
     if (normalize(active.path) !== normalize(changedPath) && !evBase.startsWith(base + ".") && evBase !== base) {
       return;
     }
-    if (active.dirty) return;
+    // 已有未保存修改时仍提示，但强调重新加载会丢失本地改动
+    const dirty = active.dirty;
     prompt = {
       title: "文件已更新",
-      body: `${titleOf(changedPath)} 已被外部修改，是否重新加载？`,
+      body: dirty
+        ? `${titleOf(active.path)} 已被外部修改。当前有未保存的改动，重新加载将丢失这些改动，是否继续？`
+        : `${titleOf(active.path)} 已被外部修改，是否重新加载？`,
       actions: [
         {
-          label: "重新加载",
+          label: dirty ? "重新加载（丢弃本地改动）" : "重新加载",
           kind: "primary",
           run: async () => {
             prompt = null;
-            await openPath(changedPath, false);
+            await openPath(active.path, true);
           },
         },
         { label: "忽略", run: () => { prompt = null; } },
@@ -233,6 +238,24 @@
       const result = await invoke<ReadFileResult>("read_file", { path, force });
       const found = tabs.find((t) => t.path === result.path);
       if (found) {
+        // force=true 时是外部修改后重新加载：用新内容覆盖当前标签，重置 dirty 状态
+        if (force) {
+          tabs = tabs.map((t) =>
+            t.id === found.id
+              ? {
+                  ...t,
+                  text: result.text,
+                  lastSavedText: result.text,
+                  encoding: result.encoding,
+                  bom: result.bom,
+                  newline: result.newline,
+                  dirty: false,
+                  size: result.size,
+                }
+              : t,
+          );
+          void refreshPreview();
+        }
         activeId = found.id;
         return;
       }
@@ -430,8 +453,10 @@
     tabs = tabs.map((t) =>
       t.id === active.id ? { ...t, text, dirty: text !== t.lastSavedText } : t,
     );
+    // 大文件拉长防抖，避免 markdown-it 渲染频繁阻塞主线程
+    const delay = text.length > 200_000 ? 800 : 300;
     window.clearTimeout(debounceHandle);
-    debounceHandle = window.setTimeout(() => refreshPreview(), 300);
+    debounceHandle = window.setTimeout(() => refreshPreview(), delay);
   }
 
   async function refreshPreview() {
@@ -547,19 +572,21 @@
     }
     previewFindCount = count;
     previewFindIndex = firstFound && count > 0 ? 0 : -1;
-    markCurrentPreviewFind();
+    markCurrentPreviewFind(previewFindIndex);
   }
 
   // 高亮当前匹配项并滚动到可视区域（手动计算 scrollTop，规避 WebView2 嵌套滚动容器中
   // scrollIntoView 静默失效的问题）
-  function markCurrentPreviewFind() {
+  // index 显式传入，避免函数内部隐式读取 $state(previewFindIndex)——
+  // 若在 $effect 中被调用，隐式读取会把 previewFindIndex 变成 effect 的依赖。
+  function markCurrentPreviewFind(index: number) {
     const host = getPreviewHost();
     if (!host) return;
     const marks = host.querySelectorAll(`.${PREVIEW_FIND_MARK}`);
     marks.forEach((m, i) => {
-      m.classList.toggle(PREVIEW_FIND_ACTIVE, i === previewFindIndex);
+      m.classList.toggle(PREVIEW_FIND_ACTIVE, i === index);
     });
-    const current = marks[previewFindIndex] as HTMLElement | undefined;
+    const current = marks[index] as HTMLElement | undefined;
     if (!current) return;
     const hostRect = host.getBoundingClientRect();
     const elRect = current.getBoundingClientRect();
@@ -585,7 +612,7 @@
   function stepPreviewFind(dir: 1 | -1) {
     if (!previewFindCount) return;
     previewFindIndex = (previewFindIndex + dir + previewFindCount) % previewFindCount;
-    markCurrentPreviewFind();
+    markCurrentPreviewFind(previewFindIndex);
   }
 
   function onPreviewFindKeydown(e: KeyboardEvent) {
@@ -892,10 +919,14 @@
       const el = panePreview.querySelector<HTMLElement>(".preview-content");
       if (el) el.innerHTML = previewHtml;
       // 内容重渲染后，若有激活的查找则重新执行，否则清空状态
+      // 注意：runPreviewFind 内部的 markCurrentPreviewFind 会读取 previewFindIndex，
+      // 必须用 untrack 包裹，否则 previewFindIndex 会变成 effect 的依赖——
+      // 用户按 Enter/上下键切换匹配时，stepPreviewFind 修改 previewFindIndex 会触发
+      // 本 effect 重跑，重置 innerHTML 并把索引拉回 0，导致永远停在第一个结果。
       const findOpen = untrack(() => previewFindOpen);
       const query = untrack(() => previewFindQuery);
       if (findOpen && query.trim()) {
-        runPreviewFind(query);
+        untrack(() => runPreviewFind(query));
       } else {
         previewFindCount = 0;
         previewFindIndex = -1;

@@ -10,5 +10,7 @@ commands.allow = [
   "set_asset_root",
   "get_config",
   "set_config",
-  "exit_app"
+  "exit_app",
+  "watch_file",
+  "unwatch_file"
 ]

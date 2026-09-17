@@ -5,6 +5,9 @@ import type { AsideSpan } from "./types";
 
 const ASIDE_REGEX = /\?\?([\s\S]*?)\?\?/g;
 
+/** 大文件阈值：超过此字符数时跳过旁白装饰扫描 */
+const LARGE_DOC_THRESHOLD = 200_000;
+
 /**
  * 扫描文本中的旁白（??...??）
  */
@@ -38,6 +41,8 @@ export function scanAsides(text: string): AsideSpan[] {
  */
 export function asideMarkPlugin(): Extension {
   return EditorView.decorations.compute(["doc"], (state) => {
+    // 大文件跳过旁白装饰，避免每次按键全文 toString + 正则扫描
+    if (state.doc.length > LARGE_DOC_THRESHOLD) return Decoration.none;
     const text = state.doc.toString();
     const spans = scanAsides(text);
     const builder = new RangeSetBuilder<Decoration>();

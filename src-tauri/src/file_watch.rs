@@ -14,13 +14,6 @@ pub struct WatchState {
     watched_files: Arc<Mutex<HashSet<PathBuf>>>,
 }
 
-/// Windows 路径大小写不敏感，统一小写规范化用于比较（去掉 \\?\ verbatim 前缀）
-fn norm(p: &Path) -> String {
-    let s = p.to_string_lossy();
-    let s = s.strip_prefix("\\\\?\\").unwrap_or(&s);
-    s.to_lowercase().replace('\\', "/")
-}
-
 /// 取文件名（小写），用于不依赖目录前缀的文件名匹配
 fn file_name(p: &Path) -> String {
     p.file_name()
@@ -85,14 +78,17 @@ pub fn watch_file(
     };
 
     // 首次调用时创建 watcher，回调持有 watched_files 的 Arc（与命令共享同一份）
-    let mut wguard = state.watcher.lock().map_err(|e| e.to_string())?;
-    if wguard.is_none() {
-        *wguard = Some(
-            start_watcher(app.clone(), Arc::clone(&state.watched_files))
-                .map_err(|e| format!("启动文件监听失败: {}", e))?,
-        );
-    }
-    let mut watcher = wguard.take().unwrap();
+    // 注意：必须把 wguard 限制在独立块内，否则 guard 未释放就再次 lock state.watcher 会死锁
+    let mut watcher = {
+        let mut wguard = state.watcher.lock().map_err(|e| e.to_string())?;
+        if wguard.is_none() {
+            *wguard = Some(
+                start_watcher(app.clone(), Arc::clone(&state.watched_files))
+                    .map_err(|e| format!("启动文件监听失败: {}", e))?,
+            );
+        }
+        wguard.take().unwrap()
+    };
 
     // 同一目录只 watch 一次；无论 watch 是否成功都把 watcher 存回，避免后续调用时丢失
     let result = {

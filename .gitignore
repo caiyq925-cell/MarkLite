@@ -177,3 +177,6 @@
 
 # ZCode local files
 .zcode/
+
+# Local build outputs
+/dist-macos/
