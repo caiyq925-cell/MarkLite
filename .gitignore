@@ -180,3 +180,4 @@
 
 # Local build outputs
 /dist-macos/
+/dist-release/
