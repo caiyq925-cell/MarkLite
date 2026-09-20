@@ -3,9 +3,12 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { getVersion } from "@tauri-apps/api/app";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import type { AppConfig, DocumentTab, Heading, ReadFileResult, RecentEntry } from "./lib/types";
   import type { AsideSpan } from "./lib/cm/types";
   import { pushRecent, timeAgo } from "./lib/recents";
+  import { attachPreviewLinks } from "./lib/preview-links";
   import { createEditor, type EditorHandle } from "./lib/editor";
   import { extractHeadings } from "./lib/toc";
   import { renderPreview } from "./lib/preview";
@@ -30,6 +33,8 @@
     typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
   let errorText = $state<string | null>(null);
+  // 应用版本号由 tauri.conf.json 决定，运行时读取，避免硬编码版本号发版后忘记同步
+  let appVersion = $state("");
   let asidePanelOpen = $state(false);
   let asideEditId = $state<string | null>(null);
   let prompt = $state<null | {
@@ -644,17 +649,72 @@
     return document.getElementById("pane-preview")?.querySelector<HTMLElement>(".preview-host") ?? null;
   }
 
-  // 滚动预览到指定标题（直接设置 scrollTop，避免 scrollIntoView 在嵌套滚动容器中失效）
-  function scrollPreviewToHeading(h: Heading) {
+  // 按 id 在预览内容里找元素：id 可能含空格、点号等 CSS 选择器特殊字符，用属性比较而非选择器。
+  // 精确匹配优先，找不到时退化为大小写不敏感匹配（#My-Section 对应 id=my-section）
+  function findPreviewElementById(id: string): HTMLElement | null {
     const host = getPreviewHost();
-    const el = document.getElementById(h.id);
-    if (!el || !host) return;
+    if (!host) return null;
+    const scope = host.querySelector<HTMLElement>(".preview-content") ?? host;
+    const lower = id.toLowerCase();
+    let ciMatch: HTMLElement | null = null;
+    for (const el of scope.querySelectorAll<HTMLElement>("[id]")) {
+      if (el.id === id) return el;
+      if (!ciMatch && el.id.toLowerCase() === lower) ciMatch = el;
+    }
+    return ciMatch;
+  }
+
+  // 滚动预览到指定元素（直接设置 scrollTop，避免 scrollIntoView 在嵌套滚动容器中失效）
+  function scrollPreviewToElement(el: HTMLElement) {
+    const host = getPreviewHost();
+    if (!host) return;
     const target = el.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
     host.scrollTop = target;
     // 兜底：若 scrollTop 赋值未生效（某些 WebView2 嵌套滚动场景），改用 scrollIntoView
     if (Math.abs(host.scrollTop - target) > 2) {
       el.scrollIntoView({ block: "start", behavior: "auto" });
     }
+  }
+
+  function scrollPreviewToHeading(h: Heading) {
+    const el = findPreviewElementById(h.id);
+    if (!el) return;
+    scrollPreviewToElement(el);
+  }
+
+  // 预览内的 #锚点跳转。命中标题时同时同步源码；脚注等非标题锚点只滚动预览
+  function jumpToAnchor(fragment: string) {
+    if (!fragment) {
+      const host = getPreviewHost();
+      if (host) host.scrollTop = 0;
+      return;
+    }
+    const heading =
+      headings.find((h) => h.id === fragment) ??
+      headings.find((h) => h.id.toLowerCase() === fragment.toLowerCase());
+    if (heading) {
+      jumpHeading(heading);
+      return;
+    }
+    const el = findPreviewElementById(fragment);
+    if (!el) return;
+    lockSync();
+    scrollPreviewToElement(el);
+  }
+
+  // 预览区链接点击：WebView 的默认行为（锚点只滚 document、外部链接导航离开应用）在这里都不对，
+  // 锚点、外部链接、相对路径的 md 分别交给对应处理器（逻辑在 lib/preview-links.ts）
+  function previewLinkActions() {
+    return {
+      docPath: () => active?.path ?? null,
+      onAnchor: jumpToAnchor,
+      onExternal: (url: string) => {
+        void openUrl(url);
+      },
+      onFile: (path: string) => {
+        void openPath(path);
+      },
+    };
   }
 
   // 根据源码滚动位置，找到视口顶部最近的标题
@@ -940,9 +1000,11 @@
     if (!host) return;
     host.addEventListener("scroll", onPreviewScroll, { passive: true });
     host.addEventListener("pointerdown", onPreviewPointerDown);
+    const detachLinks = attachPreviewLinks(host, previewLinkActions());
     previewScrollUnlisten = () => {
       host.removeEventListener("scroll", onPreviewScroll);
       host.removeEventListener("pointerdown", onPreviewPointerDown);
+      detachLinks();
     };
     return () => {
       previewScrollUnlisten?.();
@@ -1095,6 +1157,11 @@
     unlistenSystemTheme = () => mql.removeEventListener("change", onSystemTheme);
     await loadConfig();
     try {
+      appVersion = await getVersion();
+    } catch {
+      /* web preview 下没有 Tauri API */
+    }
+    try {
       const argv = await invoke<string[]>("get_argv");
       for (const a of argv) {
         if (/\.(md|markdown|mdown)$/i.test(a)) await openPath(a);
@@ -1216,7 +1283,7 @@
     <div class="menu">
       <button type="button">帮助</button>
       <div class="menu-panel">
-        <button type="button" onclick={() => { errorText = "MarkLite 0.1.0 — 离线 Markdown 阅读与轻编辑"; }}>关于</button>
+        <button type="button" onclick={() => { errorText = `MarkLite ${appVersion || "—"} — 离线 Markdown 阅读与轻编辑`; }}>关于</button>
       </div>
     </div>
     </div>

@@ -67,11 +67,16 @@ md.use(markdownItKatex);
 // DOMPurify 默认白名单已完整支持 SVG（标签+几何属性）。
 // 之前用 ADD_ATTR 枚举 SVG 属性，遗漏 x/y/width/height/viewBox 等，
 // 导致 mermaid 图表在预览中丢失所有尺寸变成空白——不要再用枚举白名单过滤 SVG。
+//
+// 同理，ALLOWED_ATTR 是"替换"默认属性白名单而不是追加：一写就会把 href/src/alt/type/checked
+// 等标准属性一起删掉——锚点链接被渲染成没有 href 的 <a>（点了不跳转）、任务列表复选框
+// 退化成文本框。需要额外放开的属性一律用 ADD_ATTR 追加。
 const PURIFY: DOMPurify.Config = {
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|data|asset):|http:\/\/asset\.localhost|#)/i,
+  // 与 DOMPurify 默认正则一致，额外放行 Tauri 本地资源协议 asset:/data:
+  ALLOWED_URI_REGEXP:
+    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data|asset):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
-  ALLOWED_ATTR: ["class", "id", "style", "open"],
-  ADD_ATTR: ["target", "rel", "class", "id", "open", "style"],
+  ADD_ATTR: ["target", "rel", "open"],
 };
 
 // ── Mermaid 引擎 ────────────────────────────────────────────────────────
