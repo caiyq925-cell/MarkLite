@@ -79,6 +79,25 @@ const PURIFY: DOMPurify.Config = {
   ADD_ATTR: ["target", "rel", "open"],
 };
 
+// ── 代码块复制按钮 ──────────────────────────────────────────────────────
+// <pre> 自身 overflow:auto，按钮直接放进 pre 会随内容滚走，
+// 因此包一层 .code-block 作为定位锚点，按钮悬浮在右上角。
+// 注入发生在 DOMPurify 之后且为静态安全 HTML；点击行为见 code-copy.ts 的事件委托。
+const CODE_COPY_BUTTON =
+  `<button class="code-copy" type="button" title="复制代码" aria-label="复制代码">` +
+  `<svg class="icon-copy" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>` +
+  `<svg class="icon-check" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>` +
+  `</button>`;
+
+/** 把每个 <pre><code> 包进 .code-block 并注入右上角复制按钮（代码内容已转义，非贪婪匹配安全） */
+export function wrapCodeBlocks(html: string): string {
+  return html.replace(
+    /<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/g,
+    (_full, attrs: string, code: string) =>
+      `<div class="code-block"><pre><code${attrs}>${code}</code></pre>${CODE_COPY_BUTTON}</div>`,
+  );
+}
+
 // ── Mermaid 引擎 ────────────────────────────────────────────────────────
 let mermaidReady: Promise<typeof import("mermaid")> | null = null;
 let mermaidBooted = false;
@@ -182,7 +201,8 @@ export async function renderPreview(
       html = `<pre class="mermaid-error">图表渲染失败：${md.utils.escapeHtml(msg)}</pre>${html}`;
     }
   }
-  return html;
+  // mermaid 块已被替换为 .mermaid-svg / .mermaid-error（不含 <code>），不会被包装
+  return wrapCodeBlocks(html);
 }
 
 let mermaidSeq = 0;

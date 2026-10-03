@@ -9,6 +9,7 @@
   import type { AsideSpan } from "./lib/cm/types";
   import { pushRecent, timeAgo } from "./lib/recents";
   import { attachPreviewLinks } from "./lib/preview-links";
+  import { attachCodeCopy } from "./lib/code-copy";
   import { createEditor, type EditorHandle } from "./lib/editor";
   import { extractHeadings } from "./lib/toc";
   import { renderPreview } from "./lib/preview";
@@ -1001,10 +1002,12 @@
     host.addEventListener("scroll", onPreviewScroll, { passive: true });
     host.addEventListener("pointerdown", onPreviewPointerDown);
     const detachLinks = attachPreviewLinks(host, previewLinkActions());
+    const detachCodeCopy = attachCodeCopy(host);
     previewScrollUnlisten = () => {
       host.removeEventListener("scroll", onPreviewScroll);
       host.removeEventListener("pointerdown", onPreviewPointerDown);
       detachLinks();
+      detachCodeCopy();
     };
     return () => {
       previewScrollUnlisten?.();

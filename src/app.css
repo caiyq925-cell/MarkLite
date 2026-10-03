@@ -738,6 +738,34 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   border-radius: 4px;
 }
 .preview-host pre code { background: transparent; border: none; color: inherit; padding: 0; border-radius: 0; }
+.preview-host .code-block { position: relative; }
+.preview-host .code-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: pointer;
+  user-select: none;
+  z-index: 10;
+}
+.preview-host .code-block:hover .code-copy,
+.preview-host .code-copy:focus-visible { opacity: 1; }
+.preview-host .code-copy:hover { color: var(--text); }
+.preview-host .code-copy .icon-check { display: none; }
+.preview-host .code-copy.copied { opacity: 1; color: var(--accent); }
+.preview-host .code-copy.copied .icon-copy { display: none; }
+.preview-host .code-copy.copied .icon-check { display: block; }
 .preview-host table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 0 0 12px; }
 .preview-host th, .preview-host td { border: 1px solid var(--table-border); padding: 5px 8px; }
 .preview-host th {
@@ -1337,7 +1365,7 @@ pre.mermaid-error {
   .cm-inline-code-chip, .cm-aside, .cm-aside-overlong,
   .cm-entity-class, .cm-entity-table, .cm-entity-method,
   .cm-block-gutter, .cm-gutter-heading, .cm-gutter-list, .cm-gutter-blockquote,
-  .cm-status-slice { display: none !important; }
+  .cm-status-slice, .code-copy { display: none !important; }
   .cm-editor { height: auto !important; }
   .cm-scroller { overflow: visible !important; }
 }
